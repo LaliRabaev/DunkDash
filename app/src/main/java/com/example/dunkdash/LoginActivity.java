@@ -5,41 +5,54 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.Firebase;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 public class LoginActivity extends AppCompatActivity {
 
-    // Declare EditText and Button variables
-    private EditText usernameEditText;
-    private EditText passwordEditText;
-    private Button loginButton;
+    private EditText etUsername, etPassword;
+    private Button btnDone, btnLogin, btnSignup;
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login); // Use the XML layout you provided
+        setContentView(R.layout.activity_login);
 
-        // Initialize EditText and Button from the layout
-        usernameEditText = findViewById(R.id.username);
-        passwordEditText = findViewById(R.id.password);
-        loginButton = findViewById(R.id.login_button);
+        etUsername = findViewById(R.id.usernameInput);
+        etPassword = findViewById(R.id.passwordInput);
+        btnDone = findViewById(R.id.doneButton);
+        btnLogin = findViewById(R.id.loginButton);
+        btnSignup = findViewById(R.id.signupButton);
+        mAuth = FirebaseAuth.getInstance();
 
-        // Set onClickListener for the login button
-        loginButton.setOnClickListener(new View.OnClickListener() {
+        btnDone.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Get the text from the username and password fields
-                String username = usernameEditText.getText().toString();
-                String password = passwordEditText.getText().toString();
+                String username = etUsername.getText().toString().trim();
+                String password = etPassword.getText().toString().trim();
 
-                // Simple validation logic
                 if (username.isEmpty() || password.isEmpty()) {
                     Toast.makeText(LoginActivity.this, "Please fill out both fields", Toast.LENGTH_SHORT).show();
                 } else {
-                    // You can add actual login logic here (e.g., API call)
-                    Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
+                    loginUser(username, password);
                 }
             }
         });
+    }
+        private void loginUser(String username, String password) {
+            mAuth.signInWithEmailAndPassword(username, password)
+                    .addOnCompleteListener(this, task -> {
+                        if (task.isSuccessful()) {
+                            FirebaseUser user = mAuth.getCurrentUser();
+                            Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
+                            // TODO: Redirect to the main activity
+                        } else {
+                            Toast.makeText(LoginActivity.this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                        });
     }
 }
