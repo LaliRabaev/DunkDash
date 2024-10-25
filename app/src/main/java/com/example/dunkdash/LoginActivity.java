@@ -1,5 +1,6 @@
 package com.example.dunkdash;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -49,7 +50,8 @@ public class LoginActivity extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             FirebaseUser user = mAuth.getCurrentUser();
                             Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
-                            // TODO: Redirect to the main activity
+                            Intent movingtohomepage = new Intent(LoginActivity.this, HomePageActivity.class);
+                            startActivity(movingtohomepage);
                         } else {
                             Toast.makeText(LoginActivity.this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                         }
