@@ -9,13 +9,13 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.Firebase;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+
 public class LoginActivity extends AppCompatActivity {
 
     private EditText etUsername, etPassword;
-    private Button btnDone, btnLogin, btnSignup;
+    private Button btnDone, btnSignup;
     private FirebaseAuth mAuth;
 
     @Override
@@ -26,10 +26,10 @@ public class LoginActivity extends AppCompatActivity {
         etUsername = findViewById(R.id.usernameInput);
         etPassword = findViewById(R.id.passwordInput);
         btnDone = findViewById(R.id.doneButton);
-        btnLogin = findViewById(R.id.loginButton);
         btnSignup = findViewById(R.id.signupButton);
         mAuth = FirebaseAuth.getInstance();
 
+        // מאזין ללחיצה על כפתור התחברות
         btnDone.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -43,18 +43,29 @@ public class LoginActivity extends AppCompatActivity {
                 }
             }
         });
+
+        // מאזין ללחיצה על כפתור מעבר לעמוד Signup
+        btnSignup.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(LoginActivity.this, SignupActivity.class);
+                startActivity(intent);
+            }
+        });
     }
-        private void loginUser(String username, String password) {
-            mAuth.signInWithEmailAndPassword(username, password)
-                    .addOnCompleteListener(this, task -> {
-                        if (task.isSuccessful()) {
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
-                            Intent movingtohomepage = new Intent(LoginActivity.this, HomePageActivity.class);
-                            startActivity(movingtohomepage);
-                        } else {
-                            Toast.makeText(LoginActivity.this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
-                        }
-                        });
+
+
+    private void loginUser(String username, String password) {
+        mAuth.signInWithEmailAndPassword(username, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
+                        Intent movingtohomepage = new Intent(LoginActivity.this, HomePageActivity.class);
+                        startActivity(movingtohomepage);
+                    } else {
+                        Toast.makeText(LoginActivity.this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 }

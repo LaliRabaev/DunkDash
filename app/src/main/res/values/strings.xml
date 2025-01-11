@@ -8,5 +8,6 @@
     <string name="app_logo">"app logo"</string>
     <string name="login_button">"Login"</string>
     <string name="sign_up_button">"Sign Up"</string>
+    <string name="repeat_password_hint">"Repeat Password"</string>
 
 </resources>
