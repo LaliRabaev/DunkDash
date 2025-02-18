@@ -1,43 +1,39 @@
 package com.example.dunkdash;
-
-import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Button;
+import androidx.appcompat.app.AppCompatActivity;
 
 public class HomePageActivity extends AppCompatActivity {
 
-    private Button startGameButton;
-    private Button exitButton;
+    private boolean gameStarted = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_page);
 
-        // Initialize buttons
-        startGameButton = findViewById(R.id.startGameButton);
-        exitButton = findViewById(R.id.exitButton);
-
-        // Set onClick listener for Start Game button
-       // startGameButton.setOnClickListener(new View.OnClickListener() {
-           // @Override
-//            public void onClick(View v) {
-//                // Replace GameActivity.class with the actual game activity class
-//                Intent intent = new Intent(HomePageActivity.this, GameActivity.class);
-//                startActivity(intent);
-//            }
-//        });
-
-        // Set onClick listener for Exit button
-        exitButton.setOnClickListener(new View.OnClickListener() {
+        // Set up the touch listener on the root layout to start the game on touch
+        View rootLayout = findViewById(R.id.rootLayout);
+        rootLayout.setOnTouchListener(new View.OnTouchListener() {
             @Override
-            public void onClick(View v) {
-                // Exiting the app
-                finish();
-                System.exit(0);
+            public boolean onTouch(View v, MotionEvent event) {
+                // When the screen is touched (ACTION_DOWN) and the game hasn't started yet
+                if (event.getAction() == MotionEvent.ACTION_DOWN && !gameStarted) {
+                    gameStarted = true;
+                    startGame();
+                    return true;
+                }
+                return false;
             }
         });
     }
+
+    private void startGame() {
+        Intent intent = new Intent(HomePageActivity.this, GameActivity.class);
+        startActivity(intent);
+        finish();
+    }
 }
+

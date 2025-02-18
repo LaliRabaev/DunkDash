@@ -1,50 +1,117 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".HomePageActivity">
+    <ImageView
+        android:id="@+id/blue_bk"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/blue_bk" />
 
-    <!-- Game Title -->
+    <ImageView
+        android:id="@+id/player_basketball"
+        android:layout_width="80dp"
+        android:layout_height="60dp"
+        android:layout_centerInParent="true"
+        android:src="@drawable/basketball_player1" />
+
+
+
     <TextView
-        android:id="@+id/gameTitle"
+        android:id="@+id/startText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="DANKDASH"
-        android:textSize="32sp"
-        android:textColor="#ffffff"
-        android:textStyle="bold"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/startGameButton"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="40dp"/>
+        android:layout_below="@id/player_basketball"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="20dp"
+        android:text="@string/start_playing"
+        android:layout_centerHorizontal="true"
+        android:textColor="@color/orange"
+        android:textSize="30sp"
+        android:textStyle="bold" />
 
-    <!-- Start Game Button -->
-    <Button
-        android:id="@+id/startGameButton"
+    <LinearLayout
+        android:id="@+id/iconContainerRight"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Start Game"
-        android:textColor="#2196F3"
-        android:backgroundTint="#FF9800"
-        app:layout_constraintTop_toBottomOf="@id/gameTitle"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="20dp"/>
+        android:orientation="vertical"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="8dp">
 
-    <!-- Exit Button -->
-    <Button
-        android:id="@+id/exitButton"
+
+        <ImageView
+            android:id="@+id/cup_icon"
+            android:layout_width="65dp"
+            android:layout_marginVertical="20dp"
+            android:layout_marginLeft="10dp"
+            android:layout_height="65dp"
+            android:src="@drawable/cup_icon"
+            android:layout_marginBottom="8dp" />
+
+        <ImageView
+            android:id="@+id/leaderboard_icon"
+            android:layout_width="65dp"
+            android:layout_marginVertical="20dp"
+            android:layout_marginLeft="10dp"
+            android:layout_height="65dp"
+            android:src="@drawable/leaderboard_icon"
+            android:layout_marginBottom="8dp" />
+
+
+
+        <ImageView
+            android:id="@+id/setting_icon"
+            android:layout_width="65dp"
+            android:layout_marginVertical="20dp"
+            android:layout_marginLeft="10dp"
+            android:layout_height="65dp"
+            android:src="@drawable/setting_icon" />
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/iconContainerLeft"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Exit"
-        android:textColor="#FF9800"
-        android:backgroundTint="#4F72D9"
-        app:layout_constraintTop_toBottomOf="@id/startGameButton"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="20dp"/>
+        android:orientation="vertical"
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="8dp">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <ImageView
+            android:id="@+id/ball_icon"
+            android:layout_width="65dp"
+            android:layout_marginVertical="20dp"
+            android:layout_marginLeft="10dp"
+            android:layout_height="65dp"
+            android:src="@drawable/ball_icon"
+            android:layout_marginBottom="8dp" />
+
+        <ImageView
+            android:id="@+id/pitches_icon"
+            android:layout_width="65dp"
+            android:layout_marginVertical="20dp"
+            android:layout_marginLeft="10dp"
+            android:layout_height="65dp"
+            android:src="@drawable/pitches_icon"
+            android:layout_marginBottom="8dp" />
+
+        <ImageView
+            android:id="@+id/skull_icon"
+            android:layout_width="65dp"
+            android:layout_marginVertical="20dp"
+            android:layout_marginLeft="10dp"
+            android:layout_height="65dp"
+            android:src="@drawable/skull_icon"
+            android:layout_marginBottom="8dp" />
+
+    </LinearLayout>
+
+
+</RelativeLayout>
