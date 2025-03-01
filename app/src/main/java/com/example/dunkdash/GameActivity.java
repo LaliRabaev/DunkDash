@@ -1,6 +1,9 @@
 package com.example.dunkdash;
+
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.Gravity;
@@ -17,6 +20,7 @@ public class GameActivity extends AppCompatActivity {
     private ImageView player;
     private FrameLayout leftContainer, rightContainer;
     private View topBarrierContainer, bottomBarrierContainer;
+    // A combined list of all side cones (from both left and right)
     private List<ImageView> sideCones = new ArrayList<>();
 
     // Game loop handler and runnable
@@ -26,12 +30,17 @@ public class GameActivity extends AppCompatActivity {
 
     // Player position and velocity (for simple physics)
     private float playerX, playerY;
-    private float dx = 5f;       // horizontal velocity
-    private float dy = 0f;       // vertical velocity (starts at 0)
+    // Increase horizontal speed (e.g., from 5f to 8f)
+    private float dx = 8f;
+    private float dy = 0f;
     private final float GRAVITY = 0.5f;
     private final float JUMP_VELOCITY = -10f;
 
-    // Flag to ensure obstacles are added once
+    // Flags to track which side's cones are active
+    private boolean leftConesActive = true;
+    private boolean rightConesActive = true;
+
+    // Flag to ensure obstacles are added once on start
     private boolean obstaclesAdded = false;
 
     @Override
@@ -45,7 +54,7 @@ public class GameActivity extends AppCompatActivity {
         topBarrierContainer = findViewById(R.id.top_barrier_container);
         bottomBarrierContainer = findViewById(R.id.bottom_barrier_container);
 
-        // Set a click listener on the entire game area to make the ball jump (like Flappy Bird)
+        // Set a click listener on the game area so that each tap makes the ball jump
         View rootLayout = findViewById(R.id.rootLayout);
         rootLayout.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -58,78 +67,95 @@ public class GameActivity extends AppCompatActivity {
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        // Once the views are measured, add obstacles and start the game loop
+        // Once views are measured, add obstacles and start the game loop
         if (hasFocus && !obstaclesAdded) {
-            addSideConesRandomly();
+            // Initially add cones to both sides
+            addConesForSide("left");
+            addConesForSide("right");
+            obstaclesAdded = true;
             // Initialize player's starting position (after layout)
             playerX = player.getX();
             playerY = player.getY();
             startGameLoop();
-            obstaclesAdded = true;
         }
     }
 
     /**
-     * Adds a random number (1 to 4) of side cones for each side,
-     * spacing them out so they do not overlap.
+     * Adds a random number (between 1 and 4) of cones to the specified side.
+     * The cones are spaced evenly so they do not overlap.
+     *
+     * @param side "left" or "right"
      */
-    private void addSideConesRandomly() {
+    private void addConesForSide(String side) {
         Random random = new Random();
-
-        // Clear any existing cones
-        leftContainer.removeAllViews();
-        rightContainer.removeAllViews();
-        sideCones.clear();
-
-        // Determine random count between 1 and 4 for each side
-        int leftCount = 1 + random.nextInt(4);  // [1,4]
-        int rightCount = 1 + random.nextInt(4);
-
-        // Get container heights (in pixels)
-        int leftContainerHeight = leftContainer.getHeight();
-        int rightContainerHeight = rightContainer.getHeight();
+        int count = 1 + random.nextInt(4); // random count from 1 to 4
         int coneHeightPx = dpToPx(120);
-
-        // Calculate vertical gap to ensure cones do not overlap:
-        int leftGap = 0;
-        if (leftCount * coneHeightPx < leftContainerHeight) {
-            leftGap = (leftContainerHeight - leftCount * coneHeightPx) / (leftCount + 1);
+        int containerHeight;
+        FrameLayout container;
+        if (side.equals("left")) {
+            container = leftContainer;
+            containerHeight = leftContainer.getHeight();
+        } else {
+            container = rightContainer;
+            containerHeight = rightContainer.getHeight();
         }
-        int rightGap = 0;
-        if (rightCount * coneHeightPx < rightContainerHeight) {
-            rightGap = (rightContainerHeight - rightCount * coneHeightPx) / (rightCount + 1);
+        int gap = 0;
+        if (count * coneHeightPx < containerHeight) {
+            gap = (containerHeight - count * coneHeightPx) / (count + 1);
         }
-
-        // Add cones on the left side
-        for (int i = 0; i < leftCount; i++) {
+        for (int i = 0; i < count; i++) {
             ImageView cone = new ImageView(this);
             cone.setImageResource(R.drawable.game_cone);
-            cone.setRotation(90); // face inward
+            // Rotate cones so they face inward
+            if (side.equals("left")) {
+                cone.setRotation(90);
+            } else {
+                cone.setRotation(-90);
+            }
             cone.setScaleType(ImageView.ScaleType.FIT_XY);
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(dpToPx(80), coneHeightPx);
-            params.leftMargin = dpToPx(8);
-            // Position: gap*(i+1) + i * coneHeight
-            params.topMargin = leftGap * (i + 1) + coneHeightPx * i;
-            leftContainer.addView(cone, params);
+            if (side.equals("left")) {
+                params.leftMargin = dpToPx(8);
+            } else {
+                params.rightMargin = dpToPx(8);
+                params.gravity = Gravity.END;
+            }
+            params.topMargin = gap * (i + 1) + coneHeightPx * i;
+            container.addView(cone, params);
             sideCones.add(cone);
         }
-
-        // Add cones on the right side
-        for (int i = 0; i < rightCount; i++) {
-            ImageView cone = new ImageView(this);
-            cone.setImageResource(R.drawable.game_cone);
-            cone.setRotation(-90); // face inward
-            cone.setScaleType(ImageView.ScaleType.FIT_XY);
-            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(dpToPx(80), coneHeightPx);
-            params.rightMargin = dpToPx(8);
-            params.gravity = Gravity.END;
-            params.topMargin = rightGap * (i + 1) + coneHeightPx * i;
-            rightContainer.addView(cone, params);
-            sideCones.add(cone);
+        // Mark the side as active
+        if (side.equals("left")) {
+            leftConesActive = true;
+        } else {
+            rightConesActive = true;
         }
     }
-    private void repositionSideCones() {
-        addSideConesRandomly();
+
+    /**
+     * Removes all cones from the specified side.
+     *
+     * @param side "left" or "right"
+     */
+    private void removeConesForSide(String side) {
+        if (side.equals("left")) {
+            leftContainer.removeAllViews();
+            leftConesActive = false;
+            // Remove corresponding cones from the list
+            for (int i = sideCones.size() - 1; i >= 0; i--) {
+                if (sideCones.get(i).getParent() == leftContainer) {
+                    sideCones.remove(i);
+                }
+            }
+        } else if (side.equals("right")) {
+            rightContainer.removeAllViews();
+            rightConesActive = false;
+            for (int i = sideCones.size() - 1; i >= 0; i--) {
+                if (sideCones.get(i).getParent() == rightContainer) {
+                    sideCones.remove(i);
+                }
+            }
+        }
     }
 
     /**
@@ -152,29 +178,48 @@ public class GameActivity extends AppCompatActivity {
     }
 
     /**
-     * Updates the player's position by applying movement and gravity.
+     * Updates the player's position by applying movement, gravity, and handling bounces.
      */
     private void updatePlayerPosition() {
-        // Update horizontal position
+        // Update positions
         playerX += dx;
-        // Update vertical position and apply gravity
         playerY += dy;
         dy += GRAVITY;
 
-        // Get parent dimensions (game area)
+        // Get game area dimensions
         View parent = (View) player.getParent();
         int parentWidth = parent.getWidth();
         int parentHeight = parent.getHeight();
         int playerWidth = player.getWidth();
         int playerHeight = player.getHeight();
 
-        // Bounce off left/right edges:
-        if (playerX <= 0 || playerX + playerWidth >= parentWidth) {
+        // Check for horizontal bounce:
+        // When the ball touches the left edge:
+        if (playerX <= 0) {
             dx = -dx;
-            repositionSideCones();
+            // If left cones are active, remove them so that the ball can exit without collision.
+            if (leftConesActive) {
+                removeConesForSide("left");
+            } else {
+                // Otherwise, if right cones are not active, re-add them.
+                if (!rightConesActive) {
+                    addConesForSide("right");
+                }
+            }
+        }
+        // When the ball touches the right edge:
+        else if (playerX + playerWidth >= parentWidth) {
+            dx = -dx;
+            if (rightConesActive) {
+                removeConesForSide("right");
+            } else {
+                if (!leftConesActive) {
+                    addConesForSide("left");
+                }
+            }
         }
 
-        // Clamp vertical position to avoid going off-screen (barrier collisions are checked separately)
+        // Clamp vertical position so the ball stays onscreen (barrier collisions are checked separately)
         if (playerY < 0) {
             playerY = 0;
             dy = 0;
@@ -188,27 +233,28 @@ public class GameActivity extends AppCompatActivity {
         player.setY(playerY);
     }
 
+    /**
+     * Checks for collisions between the ball and obstacles.
+     * Uses pixel-perfect collision for side cones and rectangular intersection for barriers.
+     *
+     * @return true if a collision is detected; false otherwise.
+     */
     private boolean checkCollision() {
-        Rect playerRect = new Rect();
-        player.getHitRect(playerRect);
-
-        // Check collision with side cones (shrink each cone's hit rect by a margin for better accuracy)
+        // Use pixel-perfect collision for side cones
         for (ImageView cone : sideCones) {
-            Rect coneRect = new Rect();
-            cone.getHitRect(coneRect);
-            int margin = dpToPx(5);
-            coneRect.inset(margin, margin);
-            if (Rect.intersects(playerRect, coneRect)) {
+            if (pixelCollision(player, cone)) {
                 return true;
             }
         }
-        // Check collision with top barrier container
+        // Use rectangular collision for top barrier
+        Rect playerRect = new Rect();
+        player.getHitRect(playerRect);
         Rect topRect = new Rect();
         topBarrierContainer.getHitRect(topRect);
         if (Rect.intersects(playerRect, topRect)) {
             return true;
         }
-        // Check collision with bottom barrier container
+        // And for bottom barrier
         Rect bottomRect = new Rect();
         bottomBarrierContainer.getHitRect(bottomRect);
         if (Rect.intersects(playerRect, bottomRect)) {
@@ -218,7 +264,60 @@ public class GameActivity extends AppCompatActivity {
     }
 
     /**
-     * Transitions to the FailActivity if a collision occurs.
+     * Performs pixel-perfect collision detection between two ImageViews.
+     *
+     * @param ballView The ball ImageView.
+     * @param coneView The cone ImageView.
+     * @return true if overlapping non-transparent pixels are found; false otherwise.
+     */
+    private boolean pixelCollision(ImageView ballView, ImageView coneView) {
+        // Both drawables must be BitmapDrawable
+        if (!(ballView.getDrawable() instanceof BitmapDrawable) ||
+                !(coneView.getDrawable() instanceof BitmapDrawable)) {
+            return false;
+        }
+        Bitmap ballBitmap = ((BitmapDrawable) ballView.getDrawable()).getBitmap();
+        Bitmap coneBitmap = ((BitmapDrawable) coneView.getDrawable()).getBitmap();
+
+        // Get global visible rectangles for both views
+        Rect ballRect = new Rect();
+        ballView.getGlobalVisibleRect(ballRect);
+        Rect coneRect = new Rect();
+        coneView.getGlobalVisibleRect(coneRect);
+
+        // Determine the intersection
+        Rect intersectRect = new Rect();
+        if (!intersectRect.setIntersect(ballRect, coneRect)) {
+            return false;
+        }
+
+        // Offsets within each bitmap
+        int ballOffsetX = intersectRect.left - ballRect.left;
+        int ballOffsetY = intersectRect.top - ballRect.top;
+        int coneOffsetX = intersectRect.left - coneRect.left;
+        int coneOffsetY = intersectRect.top - coneRect.top;
+
+        int alphaThreshold = 50; // Adjust as needed
+
+        // Check each pixel in the intersection area
+        for (int y = 0; y < intersectRect.height(); y++) {
+            for (int x = 0; x < intersectRect.width(); x++) {
+                int ballPixel = ballBitmap.getPixel(ballOffsetX + x, ballOffsetY + y);
+                int conePixel = coneBitmap.getPixel(coneOffsetX + x, coneOffsetY + y);
+
+                int ballAlpha = (ballPixel >> 24) & 0xff;
+                int coneAlpha = (conePixel >> 24) & 0xff;
+
+                if (ballAlpha > alphaThreshold && coneAlpha > alphaThreshold) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Transitions to FailActivity when a collision occurs.
      */
     private void goToFailPage() {
         Intent intent = new Intent(GameActivity.this, FailActivity.class);
@@ -241,13 +340,10 @@ public class GameActivity extends AppCompatActivity {
     }
 
     /**
-     * Helper method to convert dp (density-independent pixels) to actual pixels.
+     * Helper method to convert dp to pixels.
      */
     private int dpToPx(int dp) {
         float density = getResources().getDisplayMetrics().density;
         return Math.round(dp * density);
     }
 }
-
-
-
