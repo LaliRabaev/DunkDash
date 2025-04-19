@@ -29,6 +29,9 @@
         <activity android:name=".SuccessfulSignupActivity" />
         <activity android:name=".GameActivity" />
         <activity android:name=".FailActivity" />
+        <activity android:name=".SelectBackgrounds" />
+        <activity android:name=".SelectBasketballs" />
+        <activity android:name=".SelectModes" />
     </application>
 
 </manifest>

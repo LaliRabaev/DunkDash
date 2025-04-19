@@ -1,3 +1,4 @@
+
 package com.example.dunkdash;
 
 import android.content.Intent;
@@ -10,328 +11,287 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.Timestamp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.Transaction;
+
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Random;
 
 public class GameActivity extends AppCompatActivity {
 
+    // UI & containers
     private ImageView player;
     private FrameLayout leftContainer, rightContainer;
-    private View topBarrierContainer, bottomBarrierContainer;
-    // Combined list of all side cones (from both left and right)
-    private List<ImageView> sideCones = new ArrayList<>();
+    private View topBarrier, bottomBarrier;
+    private View rootLayout;
 
-    // Game loop handler and runnable
+    // Firestore & Auth
+    private FirebaseAuth auth;
+    private FirebaseFirestore db;
+    private String userId;
+
+    // Game loop
     private Handler handler = new Handler();
-    private Runnable gameRunnable;
-    private final int FRAME_RATE = 16; // ~60 FPS
+    private Runnable gameLoop;
+    private static final int FRAME_RATE_MS = 16; // ~60fps
 
-    // Player position and velocity
+    // Physics
     private float playerX, playerY;
-    // Increase horizontal speed (was 5f, now 8f)
     private float dx = 8f;
     private float dy = 0f;
-    private final float GRAVITY = 0.5f;
-    private final float JUMP_VELOCITY = -10f;
+    private static final float GRAVITY = 0.5f;
+    private static final float JUMP_VELOCITY = -10f;
 
-    // Flags to track which side's cones are active
-    private boolean leftConesActive = true;
-    private boolean rightConesActive = true;
-    // To add obstacles only once when views are measured
-    private boolean obstaclesAdded = false;
+    // Obstacles
+    private List<ImageView> sideCones = new ArrayList<>();
+    private boolean leftActive = true, rightActive = true;
+    private boolean prepared = false;
+
+    // Metrics
+    private long startTime;
+    private int tapCount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
-        player = findViewById(R.id.player_basketball);
-        leftContainer = findViewById(R.id.left_cones_container);
+        // Init UI
+        player      = findViewById(R.id.player_basketball);
+        leftContainer  = findViewById(R.id.left_cones_container);
         rightContainer = findViewById(R.id.right_cones_container);
-        topBarrierContainer = findViewById(R.id.top_barrier_container);
-        bottomBarrierContainer = findViewById(R.id.bottom_barrier_container);
+        topBarrier     = findViewById(R.id.top_barrier_container);
+        bottomBarrier  = findViewById(R.id.bottom_barrier_container);
+        rootLayout     = findViewById(R.id.rootLayout);
 
-        // Tap anywhere to make the ball jump
-        View rootLayout = findViewById(R.id.rootLayout);
-        rootLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dy = JUMP_VELOCITY;
-            }
+        // Init Firebase
+        auth = FirebaseAuth.getInstance();
+        db   = FirebaseFirestore.getInstance();
+        FirebaseUser user = auth.getCurrentUser();
+        if (user != null) {
+            userId = user.getUid();
+        }
+
+        // Jump listener & tap counter
+        rootLayout.setOnClickListener(v -> {
+            dy = JUMP_VELOCITY;
+            tapCount++;
         });
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        // Once views are measured, add obstacles and start the game loop.
-        if (hasFocus && !obstaclesAdded) {
-            // Initially add cones on both sides.
-            addConesForSide("left");
-            addConesForSide("right");
-            obstaclesAdded = true;
-            // Initialize the player's starting position.
+        if (hasFocus && !prepared) {
+            // Set initial metrics
+            startTime = System.currentTimeMillis();
+            tapCount   = 0;
+
+            // Populate obstacles
+            addCones("left");
+            addCones("right");
+            prepared = true;
+
+            // Record start position
             playerX = player.getX();
             playerY = player.getY();
+
+            // Start loop
             startGameLoop();
         }
     }
 
-    /**
-     * Adds a random number (1 to 4) of cones to the specified side,
-     * spaced evenly so they do not overlap.
-     *
-     * @param side "left" or "right"
-     */
-    private void addConesForSide(String side) {
-        Random random = new Random();
-        int count = 1 + random.nextInt(4); // random count from 1 to 4
-        int coneHeightPx = dpToPx(120);
-        int containerHeight;
-        FrameLayout container;
-        if (side.equals("left")) {
-            container = leftContainer;
-            containerHeight = leftContainer.getHeight();
-        } else {
-            container = rightContainer;
-            containerHeight = rightContainer.getHeight();
-        }
-        int gap = 0;
-        if (count * coneHeightPx < containerHeight) {
-            gap = (containerHeight - count * coneHeightPx) / (count + 1);
-        }
-        for (int i = 0; i < count; i++) {
-            ImageView cone = new ImageView(this);
-            cone.setImageResource(R.drawable.game_cone);
-            // Rotate cones so they face inward.
-            if (side.equals("left")) {
-                cone.setRotation(90);
-            } else {
-                cone.setRotation(-90);
-            }
-            cone.setScaleType(ImageView.ScaleType.FIT_XY);
-            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(dpToPx(80), coneHeightPx);
-            if (side.equals("left")) {
-                params.leftMargin = dpToPx(8);
-            } else {
-                params.rightMargin = dpToPx(8);
-                params.gravity = Gravity.END;
-            }
-            params.topMargin = gap * (i + 1) + coneHeightPx * i;
-            container.addView(cone, params);
-            sideCones.add(cone);
-        }
-        // Mark the side as active.
-        if (side.equals("left")) {
-            leftConesActive = true;
-        } else {
-            rightConesActive = true;
-        }
-    }
-
-    /**
-     * Removes all cones from the specified side.
-     *
-     * @param side "left" or "right"
-     */
-    private void removeConesForSide(String side) {
-        if (side.equals("left")) {
-            leftContainer.removeAllViews();
-            leftConesActive = false;
-            // Remove from the combined list.
-            for (int i = sideCones.size() - 1; i >= 0; i--) {
-                if (sideCones.get(i).getParent() == leftContainer) {
-                    sideCones.remove(i);
-                }
-            }
-        } else if (side.equals("right")) {
-            rightContainer.removeAllViews();
-            rightConesActive = false;
-            for (int i = sideCones.size() - 1; i >= 0; i--) {
-                if (sideCones.get(i).getParent() == rightContainer) {
-                    sideCones.remove(i);
-                }
-            }
-        }
-    }
-
-    /**
-     * Starts the game loop.
-     */
     private void startGameLoop() {
-        gameRunnable = new Runnable() {
-            @Override
-            public void run() {
-                updatePlayerPosition();
-                if (checkCollision()) {
-                    handler.removeCallbacks(this);
-                    goToFailPage();
-                } else {
-                    handler.postDelayed(this, FRAME_RATE);
-                }
+        gameLoop = () -> {
+            updateMovement();
+            if (detectCollision()) {
+                handler.removeCallbacks(gameLoop);
+                saveGameAndFinish();
+            } else {
+                handler.postDelayed(gameLoop, FRAME_RATE_MS);
             }
         };
-        handler.postDelayed(gameRunnable, FRAME_RATE);
+        handler.postDelayed(gameLoop, FRAME_RATE_MS);
     }
 
-    /**
-     * Updates the player's position, applies gravity, and handles bounces.
-     */
-    private void updatePlayerPosition() {
+    private void updateMovement() {
+        // Move
         playerX += dx;
         playerY += dy;
         dy += GRAVITY;
+        // Gradually speed up
+        dx *= 1.0005f;
 
-        View parent = (View) player.getParent();
-        int parentWidth = parent.getWidth();
-        int parentHeight = parent.getHeight();
-        int playerWidth = player.getWidth();
-        int playerHeight = player.getHeight();
+        // Bounds & bounce
+        int pw = player.getWidth(), ph = player.getHeight();
+        int w  = rootLayout.getWidth(), h  = rootLayout.getHeight();
 
-        // Horizontal bounce logic.
-        if (playerX <= 0) { // Ball touches left edge.
-            dx = -dx;
-            // Remove left-side cones if present.
-            if (leftConesActive) {
-                removeConesForSide("left");
-            }
-            // Ensure right-side cones are present.
-            if (!rightConesActive) {
-                addConesForSide("right");
-            }
-        } else if (playerX + playerWidth >= parentWidth) { // Ball touches right edge.
-            dx = -dx;
-            // Remove right-side cones if present.
-            if (rightConesActive) {
-                removeConesForSide("right");
-            }
-            // Ensure left-side cones are present.
-            if (!leftConesActive) {
-                addConesForSide("left");
-            }
+        if (playerX <= 0) {
+            dx = Math.abs(dx);
+            swapSide(false, true);
+        } else if (playerX + pw >= w) {
+            dx = -Math.abs(dx);
+            swapSide(true, false);
         }
-
-        // Clamp vertical position.
-        if (playerY < 0) {
-            playerY = 0;
-            dy = 0;
-        }
-        if (playerY + playerHeight > parentHeight) {
-            playerY = parentHeight - playerHeight;
-            dy = 0;
-        }
+        // Vertical clamp
+        if (playerY < 0) { playerY = 0; dy = 0; }
+        if (playerY + ph > h) { playerY = h - ph; dy = 0; }
 
         player.setX(playerX);
         player.setY(playerY);
     }
 
-    /**
-     * Checks for collisions between the ball and obstacles.
-     * Uses pixel-perfect collision for side cones and rectangular collision for barriers.
-     */
-    private boolean checkCollision() {
-        // Check side cones.
-        for (ImageView cone : sideCones) {
-            if (pixelCollision(player, cone)) {
-                return true;
-            }
-        }
-        // Check top barrier.
-        Rect playerRect = new Rect();
-        player.getHitRect(playerRect);
-        Rect topRect = new Rect();
-        topBarrierContainer.getHitRect(topRect);
-        if (Rect.intersects(playerRect, topRect)) {
-            return true;
-        }
-        // Check bottom barrier.
-        Rect bottomRect = new Rect();
-        bottomBarrierContainer.getHitRect(bottomRect);
-        if (Rect.intersects(playerRect, bottomRect)) {
-            return true;
-        }
-        return false;
+    private void swapSide(boolean leftAdd, boolean rightAdd) {
+        if (!leftAdd && leftActive)  { removeCones(leftContainer); leftActive = false; }
+        if ( leftAdd && !leftActive) { addCones("left"); leftActive = true; }
+        if (!rightAdd && rightActive){ removeCones(rightContainer); rightActive = false; }
+        if ( rightAdd && !rightActive){ addCones("right"); rightActive = true; }
     }
 
-    /**
-     * Performs pixel-perfect collision detection between the ball and a cone.
-     */
-    private boolean pixelCollision(ImageView ballView, ImageView coneView) {
-        if (!(ballView.getDrawable() instanceof BitmapDrawable) ||
-                !(coneView.getDrawable() instanceof BitmapDrawable)) {
-            return false;
+    private void addCones(String side) {
+        FrameLayout container = (side.equals("left") ? leftContainer : rightContainer);
+        int height = container.getHeight();
+        int count  = 1 + new Random().nextInt(4);
+        int coneH  = dpToPx(120);
+        int gap    = (height - count*coneH) / (count+1);
+
+        for (int i=0; i<count; i++) {
+            ImageView c = new ImageView(this);
+            c.setImageResource(R.drawable.game_cone);
+            c.setRotation(side.equals("left") ?  90 : -90);
+            c.setScaleType(ImageView.ScaleType.FIT_XY);
+            FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(dpToPx(80), coneH);
+            p.gravity = side.equals("left") ? Gravity.START : Gravity.END;
+            p.topMargin = gap*(i+1) + coneH*i;
+            if (side.equals("right")) p.setMarginEnd(dpToPx(8));
+            container.addView(c, p);
+            sideCones.add(c);
         }
-        Bitmap ballBitmap = ((BitmapDrawable) ballView.getDrawable()).getBitmap();
-        Bitmap coneBitmap = ((BitmapDrawable) coneView.getDrawable()).getBitmap();
+    }
 
-        // Get global visible rectangles.
-        Rect ballRect = new Rect();
-        ballView.getGlobalVisibleRect(ballRect);
-        Rect coneRect = new Rect();
-        coneView.getGlobalVisibleRect(coneRect);
+    private void removeCones(FrameLayout container) {
+        container.removeAllViews();
+        // cleanup list
+        sideCones.removeIf(view -> view.getParent() == container);
+    }
 
-        // Compute intersection.
-        Rect intersectRect = new Rect();
-        if (!intersectRect.setIntersect(ballRect, coneRect)) {
-            return false;
+    private boolean detectCollision() {
+        // Pixel-level for cones
+        for (ImageView cone: sideCones) {
+            if (pixelCollision(player, cone)) return true;
         }
+        // Rect for barriers
+        Rect pr = new Rect(), tr = new Rect(), br = new Rect();
+        player.getHitRect(pr);
+        topBarrier.getHitRect(tr);
+        bottomBarrier.getHitRect(br);
+        return Rect.intersects(pr, tr) || Rect.intersects(pr, br);
+    }
 
-        // Compute offsets.
-        int ballOffsetX = intersectRect.left - ballRect.left;
-        int ballOffsetY = intersectRect.top - ballRect.top;
-        int coneOffsetX = intersectRect.left - coneRect.left;
-        int coneOffsetY = intersectRect.top - coneRect.top;
+    private boolean pixelCollision(ImageView a, ImageView b) {
+        if (!(a.getDrawable() instanceof BitmapDrawable) ||
+                !(b.getDrawable() instanceof BitmapDrawable)) return false;
+        Bitmap ba = ((BitmapDrawable)a.getDrawable()).getBitmap();
+        Bitmap bb = ((BitmapDrawable)b.getDrawable()).getBitmap();
 
-        int alphaThreshold = 50; // tweak as needed
+        Rect ra = new Rect(), rb = new Rect(), ri = new Rect();
+        a.getGlobalVisibleRect(ra);
+        b.getGlobalVisibleRect(rb);
+        if (!ri.setIntersect(ra, rb)) return false;
 
-        for (int y = 0; y < intersectRect.height(); y++) {
-            for (int x = 0; x < intersectRect.width(); x++) {
-                if (ballOffsetX + x >= ballBitmap.getWidth() || ballOffsetY + y >= ballBitmap.getHeight() ||
-                        coneOffsetX + x >= coneBitmap.getWidth() || coneOffsetY + y >= coneBitmap.getHeight()) {
-                    continue;
-                }
-                int ballPixel = ballBitmap.getPixel(ballOffsetX + x, ballOffsetY + y);
-                int conePixel = coneBitmap.getPixel(coneOffsetX + x, coneOffsetY + y);
-                int ballAlpha = (ballPixel >> 24) & 0xff;
-                int coneAlpha = (conePixel >> 24) & 0xff;
-                if (ballAlpha > alphaThreshold && coneAlpha > alphaThreshold) {
-                    return true;
-                }
+        int alphaTh = 50;
+        int oxA = ri.left - ra.left, oyA = ri.top - ra.top;
+        int oxB = ri.left - rb.left, oyB = ri.top - rb.top;
+        for (int y=0; y<ri.height(); y++) {
+            for (int x=0; x<ri.width(); x++) {
+                int pa = ba.getPixel(oxA+x, oyA+y);
+                int pb = bb.getPixel(oxB+x, oyB+y);
+                if (((pa>>24)&0xff) > alphaTh && ((pb>>24)&0xff)>alphaTh) return true;
             }
         }
         return false;
     }
 
-    /**
-     * Transitions to the FailActivity.
-     */
-    private void goToFailPage() {
-        Intent intent = new Intent(GameActivity.this, FailActivity.class);
-        startActivity(intent);
+    private void saveGameAndFinish() {
+        if (userId == null) {
+            finishFail();
+            return;
+        }
+        long now = System.currentTimeMillis();
+        double dur = (now - startTime)/1000.0;
+
+        DocumentReference gameRef = db.collection("games").document();
+        String gameId = gameRef.getId();
+
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("id",         gameId);
+        doc.put("user_id",    userId);
+        doc.put("start_date", new Timestamp(new Date(startTime)));
+        doc.put("duration",   dur);
+        doc.put("game_mode",  1);
+        doc.put("score",      tapCount);
+
+        gameRef.set(doc)
+                .addOnSuccessListener(unused -> updateUserStats())
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Save game failed: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                    finishFail();
+                });
+    }
+
+    private void updateUserStats() {
+        DocumentReference userRef = db.collection("users").document(userId);
+        db.runTransaction((Transaction.Function<Void>) tx -> {
+                    DocumentSnapshot snap = tx.get(userRef);
+                    long total = snap.contains("total_games") ? snap.getLong("total_games") : 0;
+                    long max   = snap.contains("max_score")   ? snap.getLong("max_score")   : 0;
+
+                    tx.update(userRef, "total_games", total + 1);
+                    if (tapCount > max) {
+                        tx.update(userRef, "max_score", tapCount);
+                    }
+                    return null;
+                }).addOnSuccessListener(aVoid -> finishFail())
+                .addOnFailureListener(e -> finishFail());
+    }
+
+    private void finishFail() {
+        startActivity(new Intent(this, FailActivity.class));
         finish();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        handler.removeCallbacks(gameRunnable);
+        handler.removeCallbacks(gameLoop);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (gameRunnable != null) {
-            handler.postDelayed(gameRunnable, FRAME_RATE);
-        }
+        if (gameLoop != null) handler.postDelayed(gameLoop, FRAME_RATE_MS);
     }
 
-    /**
-     * Converts dp to pixels.
-     */
     private int dpToPx(int dp) {
-        float density = getResources().getDisplayMetrics().density;
-        return Math.round(dp * density);
+        float d = getResources().getDisplayMetrics().density;
+        return Math.round(dp * d);
     }
 }
