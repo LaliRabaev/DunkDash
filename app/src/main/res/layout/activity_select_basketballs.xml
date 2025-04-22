@@ -5,204 +5,55 @@
     android:background="#FFF8F2"
     android:padding="16dp">
 
-    <!-- כותרת -->
+    <!-- Title -->
     <TextView
         android:id="@+id/balls_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="🏀 BASKETBALLS:"
-        android:textSize="28sp"
+        android:text="🏀 Select Your Basketball"
+        android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="#F57C00"
         android:layout_centerHorizontal="true"
         android:layout_alignParentTop="true"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="16dp" />
 
-    <!-- גריד של כדורים -->
+    <!-- Dynamic grid container -->
     <GridLayout
         android:id="@+id/balls_grid"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/balls_title"
-        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
         android:columnCount="3"
-        android:alignmentMode="alignMargins"
-        android:useDefaultMargins="true">
+        android:useDefaultMargins="true"
+        android:alignmentMode="alignMargins" />
 
-        <!-- כל אחד מהכדורים - ערוך לפי הסדר ששלחת -->
-
-        <!-- Orange Ball -->
-        <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:background="#FFE0B2"
-            android:padding="8dp"
-            android:layout_margin="8dp">
-
-            <ImageView
-                android:id="@+id/ball_orange"
-                android:layout_width="90dp"
-                android:layout_height="90dp"
-                android:src="@drawable/basketball_player1"
-                android:contentDescription="Orange"
-                android:clickable="true"
-                android:focusable="true" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Orange"
-                android:textColor="#E65100"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                android:layout_marginTop="6dp" />
-        </LinearLayout>
-
-        <!-- Blue Ball -->
-        <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:background="#D6E9FF"
-            android:padding="8dp"
-            android:layout_margin="8dp">
-
-            <ImageView
-                android:id="@+id/ball_blue"
-                android:layout_width="90dp"
-                android:layout_height="90dp"
-                android:src="@drawable/basketball_player2"
-                android:contentDescription="Blue"
-                android:clickable="true"
-                android:focusable="true" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Blue"
-                android:textColor="#1A73E8"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                android:layout_marginTop="6dp" />
-        </LinearLayout>
-
-        <!-- Pink Ball -->
-        <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:background="#F8BBD0"
-            android:padding="8dp"
-            android:layout_margin="8dp">
-
-            <ImageView
-                android:id="@+id/ball_pink"
-                android:layout_width="90dp"
-                android:layout_height="90dp"
-                android:src="@drawable/basketball_player3"
-                android:contentDescription="Pink"
-                android:clickable="true"
-                android:focusable="true" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Pink"
-                android:textColor="#C2185B"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                android:layout_marginTop="6dp" />
-        </LinearLayout>
-
-        <!-- Black Ball -->
-        <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:background="#EEEEEE"
-            android:padding="8dp"
-            android:layout_margin="8dp">
-
-            <ImageView
-                android:id="@+id/ball_black"
-                android:layout_width="90dp"
-                android:layout_height="90dp"
-                android:src="@drawable/basketball_player4"
-                android:contentDescription="Black"
-                android:clickable="true"
-                android:focusable="true" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Black"
-                android:textColor="#212121"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                android:layout_marginTop="6dp" />
-        </LinearLayout>
-
-        <!-- Red Ball -->
-        <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:background="#FFCDD2"
-            android:padding="8dp"
-            android:layout_margin="8dp">
-
-            <ImageView
-                android:id="@+id/ball_red"
-                android:layout_width="90dp"
-                android:layout_height="90dp"
-                android:src="@drawable/basketball_player5"
-                android:contentDescription="Red"
-                android:clickable="true"
-                android:focusable="true" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Red"
-                android:textColor="#D32F2F"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                android:layout_marginTop="6dp" />
-        </LinearLayout>
-
-    </GridLayout>
-
-    <!-- טקסט בחירה נוכחית -->
+    <!-- Selected label -->
     <TextView
         android:id="@+id/selected_ball_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Selected: None"
         android:textSize="18sp"
-        android:textColor="#000000"
-        android:layout_centerHorizontal="true"
+        android:textColor="#333333"
         android:layout_below="@id/balls_grid"
-        android:layout_marginTop="24dp" />
+        android:layout_marginTop="24dp"
+        android:layout_centerHorizontal="true" />
 
-    <!-- כפתור שמירה -->
+    <!-- Save button -->
     <Button
         android:id="@+id/save_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Save"
+        android:text="Save Selection"
         android:textAllCaps="false"
         android:textColor="#FFFFFF"
         android:backgroundTint="#F57C00"
-        android:layout_centerHorizontal="true"
         android:layout_below="@id/selected_ball_text"
         android:layout_marginTop="16dp"
+        android:layout_centerHorizontal="true"
         android:paddingLeft="24dp"
         android:paddingRight="24dp" />
-</RelativeLayout>
 
+</RelativeLayout>

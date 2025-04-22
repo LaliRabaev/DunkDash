@@ -30,7 +30,6 @@ android {
 }
 
 dependencies {
-
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
@@ -43,7 +42,4 @@ dependencies {
     implementation ("com.google.firebase:firebase-auth:22.1.2")
     implementation ("com.google.firebase:firebase-database:20.3.3")
     implementation ("com.google.firebase:firebase-firestore:24.5.0")
-
-
-
 }

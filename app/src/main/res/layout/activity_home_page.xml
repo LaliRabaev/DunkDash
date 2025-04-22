@@ -1,117 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".HomePageActivity">
+
+    <!-- Placeholder background: will be replaced in code -->
     <ImageView
-        android:id="@+id/blue_bk"
+        android:id="@+id/home_background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        android:src="@drawable/blue_bk" />
+        android:background="#DDDDDD"
+        android:src="@null" />
 
+    <!-- Placeholder basketball: replaced in code -->
     <ImageView
         android:id="@+id/player_basketball"
         android:layout_width="80dp"
         android:layout_height="60dp"
         android:layout_centerInParent="true"
-        android:src="@drawable/basketball_player1" />
+        android:background="@android:color/transparent"
+        android:src="@null" />
 
-
-
+    <!-- “Start Playing” text -->
     <TextView
         android:id="@+id/startText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/player_basketball"
+        android:layout_centerHorizontal="true"
         android:layout_marginTop="6dp"
         android:layout_marginBottom="20dp"
         android:text="@string/start_playing"
-        android:layout_centerHorizontal="true"
         android:textColor="@color/orange"
         android:textSize="30sp"
         android:textStyle="bold" />
 
+    <!-- Right‑side icon column -->
     <LinearLayout
         android:id="@+id/iconContainerRight"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
         android:layout_centerVertical="true"
-        android:layout_marginRight="8dp">
-
+        android:orientation="vertical"
+        android:layout_marginEnd="8dp">
 
         <ImageView
             android:id="@+id/cup_icon"
             android:layout_width="65dp"
-            android:layout_marginVertical="20dp"
-            android:layout_marginLeft="10dp"
             android:layout_height="65dp"
-            android:src="@drawable/cup_icon"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            android:src="@drawable/cup_icon" />
 
         <ImageView
             android:id="@+id/leaderboard_icon"
             android:layout_width="65dp"
-            android:layout_marginVertical="20dp"
-            android:layout_marginLeft="10dp"
             android:layout_height="65dp"
-            android:src="@drawable/leaderboard_icon"
-            android:layout_marginBottom="8dp" />
-
-
+            android:layout_marginBottom="8dp"
+            android:src="@drawable/leaderboard_icon" />
 
         <ImageView
             android:id="@+id/setting_icon"
             android:layout_width="65dp"
-            android:layout_marginVertical="20dp"
-            android:layout_marginLeft="10dp"
             android:layout_height="65dp"
             android:src="@drawable/setting_icon" />
-
     </LinearLayout>
 
-
+    <!-- Left‑side icon column -->
     <LinearLayout
         android:id="@+id/iconContainerLeft"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
         android:layout_centerVertical="true"
-        android:layout_marginRight="8dp">
+        android:orientation="vertical"
+        android:layout_marginStart="8dp">
 
         <ImageView
             android:id="@+id/ball_icon"
             android:layout_width="65dp"
-            android:layout_marginVertical="20dp"
-            android:layout_marginLeft="10dp"
             android:layout_height="65dp"
-            android:src="@drawable/ball_icon"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            android:src="@drawable/ball_icon" />
 
         <ImageView
             android:id="@+id/pitches_icon"
             android:layout_width="65dp"
-            android:layout_marginVertical="20dp"
-            android:layout_marginLeft="10dp"
             android:layout_height="65dp"
-            android:src="@drawable/pitches_icon"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            android:src="@drawable/pitches_icon" />
 
         <ImageView
             android:id="@+id/skull_icon"
             android:layout_width="65dp"
-            android:layout_marginVertical="20dp"
-            android:layout_marginLeft="10dp"
             android:layout_height="65dp"
-            android:src="@drawable/skull_icon"
-            android:layout_marginBottom="8dp" />
-
+            android:src="@drawable/skull_icon" />
     </LinearLayout>
-
-
 </RelativeLayout>
