@@ -65,6 +65,10 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     private int currentScore = 0;
     private boolean gameActive = true;
 
+    // Score
+    private int score;
+    private TextView scoreTextView;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,6 +77,7 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         // bind dynamic views
         gameBackground       = findViewById(R.id.game_background);
         player               = findViewById(R.id.player_basketball);
+        scoreTextView        = findViewById(R.id.score_text_view);
 
         // bind obstacles
         leftContainer        = findViewById(R.id.left_cones_container);
@@ -98,6 +103,32 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         RewardedAdManager.initialize(this);
         rewardedAdManager = new RewardedAdManager();
         rewardedAdManager.loadRewardedAd(this);
+
+        // Initialize game
+        initializeGame();
+    }
+
+    private void initializeGame() {
+        // Check if continuing from an ad
+        boolean continueGame = getIntent().getBooleanExtra("continue", false);
+        if (continueGame) {
+            // Restore the previous score
+            score = getIntent().getIntExtra("score", 0);
+            updateScoreDisplay();
+            // Additional logic to reset game state but keep the score
+        } else {
+            // Normal game initialization
+            score = 0;
+            updateScoreDisplay();
+            // Other initialization
+        }
+
+        // Rest of your initialization code
+    }
+
+    private void updateScoreDisplay() {
+        // Update your score TextView
+        scoreTextView.setText("Score: " + score);
     }
 
     @Override
@@ -322,6 +353,13 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
 
     private void finishFail() {
         startActivity(new Intent(this, FailActivity.class));
+        finish();
+    }
+
+    private void handleGameOver() {
+        Intent intent = new Intent(GameActivity.this, FailActivity.class);
+        intent.putExtra("score", score);
+        startActivity(intent);
         finish();
     }
 

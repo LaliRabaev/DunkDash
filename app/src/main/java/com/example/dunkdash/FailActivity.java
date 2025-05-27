@@ -1,28 +1,114 @@
 package com.example.dunkdash;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.rewarded.RewardedAd;
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.initialization.InitializationStatus;
+import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
 
 public class FailActivity extends AppCompatActivity {
-
+    
+    private TextView scoreTextView;
+    private Button restartButton;
+    private Button watchAdButton;
+    private int currentScore;
+    private RewardedAd rewardedAd;
+    private final String AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"; // Test ad unit ID
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_fail);
-
-        Button retryButton = findViewById(R.id.retryButton);
-        retryButton.setOnClickListener(new View.OnClickListener() {
+        
+        // Initialize AdMob
+        MobileAds.initialize(this, new OnInitializationCompleteListener() {
             @Override
-            public void onClick(View v) {
-
-                // Restart the game activity (or start your home page if needed)
-                Intent intent = new Intent(FailActivity.this, HomePageActivity.class);
-                startActivity(intent);
-                finish();
+            public void onInitializationComplete(InitializationStatus initializationStatus) {
+                loadRewardedAd();
             }
         });
+        
+        // Get score from intent
+        currentScore = getIntent().getIntExtra("score", 0);
+        
+        // Initialize UI elements
+        scoreTextView = findViewById(R.id.scoreTextView);
+        restartButton = findViewById(R.id.restartButton);
+        watchAdButton = findViewById(R.id.watchAdButton);
+        
+        // Set actual score
+        scoreTextView.setText("Score: " + currentScore);
+        
+        // Setup restart button
+        restartButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                restartGame();
+            }
+        });
+        
+        // Setup watch ad button
+        watchAdButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showRewardedAd();
+            }
+        });
+    }
+    
+    private void loadRewardedAd() {
+        AdRequest adRequest = new AdRequest.Builder().build();
+        RewardedAd.load(this, AD_UNIT_ID, adRequest, new RewardedAdLoadCallback() {
+            @Override
+            public void onAdFailedToLoad(LoadAdError loadAdError) {
+                // Ad failed to load
+                rewardedAd = null;
+                watchAdButton.setEnabled(false);
+                watchAdButton.setAlpha(0.5f);
+            }
+            
+            @Override
+            public void onAdLoaded(RewardedAd ad) {
+                rewardedAd = ad;
+                watchAdButton.setEnabled(true);
+                watchAdButton.setAlpha(1.0f);
+            }
+        });
+    }
+    
+    private void showRewardedAd() {
+        if (rewardedAd != null) {
+            rewardedAd.show(this, rewardItem -> {
+                // User earned reward, continue the game
+                continueGame();
+            });
+        } else {
+            Toast.makeText(this, "Ad not ready yet. Please try again.", Toast.LENGTH_SHORT).show();
+            loadRewardedAd();
+        }
+    }
+    
+    private void restartGame() {
+        Intent intent = new Intent(FailActivity.this, GameActivity.class);
+        startActivity(intent);
+        finish(); // Important to close this activity
+    }
+    
+    private void continueGame() {
+        Intent intent = new Intent(FailActivity.this, GameActivity.class);
+        intent.putExtra("continue", true);
+        intent.putExtra("score", currentScore);
+        startActivity(intent);
+        finish();
     }
 }
 
