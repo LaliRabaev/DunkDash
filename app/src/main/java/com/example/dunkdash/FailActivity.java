@@ -2,6 +2,8 @@ package com.example.dunkdash;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -17,6 +19,7 @@ import com.google.android.gms.ads.initialization.OnInitializationCompleteListene
 
 public class FailActivity extends AppCompatActivity {
     
+    private static final String TAG = "FailActivity";
     private TextView scoreTextView;
     private Button restartButton;
     private Button watchAdButton;
@@ -48,16 +51,21 @@ public class FailActivity extends AppCompatActivity {
         // Set actual score
         scoreTextView.setText("Score: " + currentScore);
         
-        // Setup restart button - Modified to go back to HomePageActivity
+        // Setup restart button - Improved implementation
         restartButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Navigate back to HomePageActivity instead of GameActivity
-                Intent intent = new Intent(FailActivity.this, HomePageActivity.class);
-                // Clear the activity stack to prevent issues
-                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                finish(); // Close the current activity
+                // Show toast for debugging
+                Toast.makeText(FailActivity.this, "Returning to Home Page...", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "Restart button clicked, navigating to HomePageActivity");
+                
+                // Use a handler to add a slight delay before navigating
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        navigateToHomePage();
+                    }
+                }, 300); // 300ms delay to ensure UI responsiveness
             }
         });
         
@@ -103,10 +111,7 @@ public class FailActivity extends AppCompatActivity {
     }
     
     private void restartGame() {
-        Intent intent = new Intent(FailActivity.this, HomePageActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
-        finish(); // Important to close this activity
+        navigateToHomePage(); // Use the same reliable method
     }
     
     private void continueGame() {
@@ -116,6 +121,34 @@ public class FailActivity extends AppCompatActivity {
         startActivity(intent);
         finish();
     }
+    
+    // New method for reliable navigation to home page
+    private void navigateToHomePage() {
+        try {
+            // Create a new task and clear any existing activities
+            Intent intent = new Intent(FailActivity.this, HomePageActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | 
+                           Intent.FLAG_ACTIVITY_CLEAR_TASK |
+                           Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(intent);
+            
+            // Force activity transition animation to complete
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+            
+            // Make sure this activity is finished
+            finish();
+        } catch (Exception e) {
+            Log.e(TAG, "Error navigating to home page: " + e.getMessage());
+            // Fallback navigation method
+            Intent intent = new Intent(FailActivity.this, HomePageActivity.class);
+            startActivity(intent);
+            finish();
+        }
+    }
+    
+    // Override back button to use our safe navigation method
+    @Override
+    public void onBackPressed() {
+        navigateToHomePage();
+    }
 }
-
-
