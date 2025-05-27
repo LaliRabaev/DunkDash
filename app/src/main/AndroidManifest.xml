@@ -19,6 +19,11 @@
         <meta-data
             android:name="com.google.android.gms:ads:app_id"
             android:value="ca-app-pub-3940256099942544~3347511713" />
+        
+        <!-- Add this meta-data element for AdMob -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-xxxxxxxxxxxxxxxx~yyyyyyyyyy"/>
 
         <activity
             android:name=".SignupActivity"
