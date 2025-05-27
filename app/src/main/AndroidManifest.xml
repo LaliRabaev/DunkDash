@@ -15,10 +15,10 @@
         android:theme="@style/Theme.DunkDash"
         tools:targetApi="31">
         
-        <!-- Add the AdMob app ID -->
+        <!-- Add AdMob App ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="ca-app-pub-3940256099942544~3347511713"/> <!-- Test ID, replace with real one in production -->
 
         <activity
             android:name=".SignupActivity"

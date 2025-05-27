@@ -1,7 +1,8 @@
 package com.example.dunkdash;
 
-import android.app.Activity;
 import android.content.Context;
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.ads.AdError;
@@ -10,87 +11,106 @@ import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.OnUserEarnedRewardListener;
+import com.google.android.gms.ads.RequestConfiguration;
+import com.google.android.gms.ads.rewarded.RewardItem;
 import com.google.android.gms.ads.rewarded.RewardedAd;
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
-import com.google.android.gms.ads.rewarded.RewardItem;
+
+import java.util.Arrays;
 
 public class RewardedAdManager {
     private static final String TAG = "RewardedAdManager";
-    // Test ad unit ID - replace with your real ad unit ID in production
-    private static final String AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917";
-    
+    private static final String AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"; // Test ad unit ID
+
     private RewardedAd rewardedAd;
     private boolean isLoading = false;
-    
+
     public interface RewardedAdCallback {
         void onAdRewarded();
         void onAdDismissed();
         void onAdFailedToLoad();
     }
-    
-    // Initialize MobileAds SDK
+
     public static void initialize(Context context) {
-        MobileAds.initialize(context, initializationStatus -> {});
+        // Initialize the Mobile Ads SDK
+        MobileAds.initialize(context, initializationStatus -> {
+            Log.d(TAG, "MobileAds initialized");
+        });
+
+        // Set test device IDs for development
+        RequestConfiguration configuration = new RequestConfiguration.Builder()
+                .setTestDeviceIds(Arrays.asList("ABCDEF012345"))
+                .build();
+        MobileAds.setRequestConfiguration(configuration);
     }
-    
-    // Load the rewarded ad
+
     public void loadRewardedAd(Context context) {
-        if (rewardedAd != null || isLoading) {
+        if (isLoading || isRewardedAdLoaded()) {
             return;
         }
-        
+
         isLoading = true;
         AdRequest adRequest = new AdRequest.Builder().build();
-        
+
         RewardedAd.load(context, AD_UNIT_ID, adRequest, new RewardedAdLoadCallback() {
             @Override
             public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                isLoading = false;
+                Log.d(TAG, "Ad failed to load: " + loadAdError.getMessage());
                 rewardedAd = null;
+                isLoading = false;
             }
-            
+
             @Override
             public void onAdLoaded(@NonNull RewardedAd ad) {
-                isLoading = false;
+                Log.d(TAG, "Ad was loaded");
                 rewardedAd = ad;
+                isLoading = false;
             }
         });
     }
-    
-    // Show the rewarded ad
-    public void showRewardedAd(Activity activity, RewardedAdCallback callback) {
-        if (rewardedAd == null) {
+
+    public boolean isRewardedAdLoaded() {
+        return rewardedAd != null;
+    }
+
+    public void showRewardedAd(Context context, RewardedAdCallback callback) {
+        if (!isRewardedAdLoaded()) {
+            Log.d(TAG, "Ad not loaded yet");
             callback.onAdFailedToLoad();
-            loadRewardedAd(activity);
             return;
         }
-        
+
         rewardedAd.setFullScreenContentCallback(new FullScreenContentCallback() {
             @Override
             public void onAdDismissedFullScreenContent() {
-                rewardedAd = null;
-                loadRewardedAd(activity);
+                Log.d(TAG, "Ad was dismissed");
                 callback.onAdDismissed();
+                // Load the next ad
+                loadRewardedAd(context);
             }
-            
+
             @Override
             public void onAdFailedToShowFullScreenContent(AdError adError) {
+                Log.d(TAG, "Ad failed to show: " + adError.getMessage());
                 rewardedAd = null;
                 callback.onAdFailedToLoad();
+                // Load the next ad
+                loadRewardedAd(context);
+            }
+
+            @Override
+            public void onAdShowedFullScreenContent() {
+                Log.d(TAG, "Ad showed fullscreen content");
             }
         });
-        
-        rewardedAd.show(activity, new OnUserEarnedRewardListener() {
+
+        rewardedAd.show(context, new OnUserEarnedRewardListener() {
             @Override
             public void onUserEarnedReward(@NonNull RewardItem rewardItem) {
-                // Handle the reward
+                Log.d(TAG, "User earned reward");
                 callback.onAdRewarded();
+                rewardedAd = null; // Now it's safe to set to null after reward is earned
             }
         });
-    }
-    
-    // Check if rewarded ad is loaded
-    public boolean isRewardedAdLoaded() {
-        return rewardedAd != null;
     }
 }

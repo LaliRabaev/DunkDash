@@ -100,7 +100,7 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
             tapCount++;
         });
 
-        // Initialize AdMob
+        // Initialize AdMob properly
         RewardedAdManager.initialize(this);
         rewardedAdManager = new RewardedAdManager();
         rewardedAdManager.loadRewardedAd(this);
