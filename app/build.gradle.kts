@@ -42,5 +42,5 @@ dependencies {
     implementation("com.google.firebase:firebase-auth:22.1.2")
     implementation("com.google.firebase:firebase-database:20.3.3")
     implementation("com.google.firebase:firebase-firestore:24.5.0")
-    implementation 'com.google.android.gms:play-services-ads:22.1.0'
+    implementation("com.google.android.gms:play-services-ads:22.1.0")
 }

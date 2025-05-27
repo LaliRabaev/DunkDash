@@ -1,5 +1,6 @@
 package com.example.dunkdash;
 
+import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
 
@@ -73,7 +74,8 @@ public class RewardedAdManager {
         return rewardedAd != null;
     }
 
-    public void showRewardedAd(Context context, RewardedAdCallback callback) {
+    // Changed parameter type from Context to Activity
+    public void showRewardedAd(Activity activity, RewardedAdCallback callback) {
         if (!isRewardedAdLoaded()) {
             Log.d(TAG, "Ad not loaded yet");
             callback.onAdFailedToLoad();
@@ -86,7 +88,7 @@ public class RewardedAdManager {
                 Log.d(TAG, "Ad was dismissed");
                 callback.onAdDismissed();
                 // Load the next ad
-                loadRewardedAd(context);
+                loadRewardedAd(activity);
             }
 
             @Override
@@ -95,7 +97,7 @@ public class RewardedAdManager {
                 rewardedAd = null;
                 callback.onAdFailedToLoad();
                 // Load the next ad
-                loadRewardedAd(context);
+                loadRewardedAd(activity);
             }
 
             @Override
@@ -104,7 +106,7 @@ public class RewardedAdManager {
             }
         });
 
-        rewardedAd.show(context, new OnUserEarnedRewardListener() {
+        rewardedAd.show(activity, new OnUserEarnedRewardListener() {
             @Override
             public void onUserEarnedReward(@NonNull RewardItem rewardItem) {
                 Log.d(TAG, "User earned reward");
