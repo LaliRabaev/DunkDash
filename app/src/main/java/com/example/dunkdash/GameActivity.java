@@ -6,6 +6,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -128,8 +129,12 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     }
 
     private void updateScoreDisplay() {
-        // Update your score TextView
-        scoreTextView.setText("Score: " + score);
+        // Add null check to prevent crash
+        if (scoreTextView != null) {
+            scoreTextView.setText("Score: " + score);
+        } else {
+            Log.e("GameActivity", "scoreTextView is null. Make sure score_text_view exists in your layout.");
+        }
     }
 
     @Override

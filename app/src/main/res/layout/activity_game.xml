@@ -16,6 +16,20 @@
         android:background="#DDDDDD"
         android:src="@null" />
 
+    <!-- This should be added if it doesn't already exist -->
+    <TextView
+        android:id="@+id/score_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_margin="16dp"
+        android:background="#80000000"
+        android:padding="8dp"
+        android:text="Score: 0"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
     <!-- Top barrier with 7 cones -->
     <LinearLayout
         android:id="@+id/top_barrier_container"
