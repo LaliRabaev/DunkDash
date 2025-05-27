@@ -2,9 +2,11 @@ package com.example.dunkdash;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.method.PasswordTransformationMethod;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -16,6 +18,8 @@ public class LoginActivity extends AppCompatActivity {
 
     private EditText etUsername, etPassword;
     private Button btnDone, btnSignup;
+    private ImageButton btnTogglePassword;
+    private boolean isPasswordVisible = false;
     private FirebaseAuth mAuth;
 
     @Override
@@ -27,7 +31,16 @@ public class LoginActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.passwordInput);
         btnDone = findViewById(R.id.doneButton);
         btnSignup = findViewById(R.id.signupButton);
+        btnTogglePassword = findViewById(R.id.togglePasswordVisibility);
         mAuth = FirebaseAuth.getInstance();
+
+        // Setup password visibility toggle
+        btnTogglePassword.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                togglePasswordVisibility();
+            }
+        });
 
         // מאזין ללחיצה על כפתור התחברות
         btnDone.setOnClickListener(new View.OnClickListener() {
@@ -54,6 +67,21 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    private void togglePasswordVisibility() {
+        if (isPasswordVisible) {
+            // Hide password
+            etPassword.setTransformationMethod(new PasswordTransformationMethod());
+            btnTogglePassword.setImageResource(R.drawable.ic_visibility_off);
+        } else {
+            // Show password
+            etPassword.setTransformationMethod(null);
+            btnTogglePassword.setImageResource(R.drawable.ic_visibility);
+        }
+        isPasswordVisible = !isPasswordVisible;
+        
+        // Maintain cursor position
+        etPassword.setSelection(etPassword.getText().length());
+    }
 
     private void loginUser(String username, String password) {
         mAuth.signInWithEmailAndPassword(username, password)

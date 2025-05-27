@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-public class GameActivity extends AppCompatActivity {
+public class GameActivity extends AppCompatActivity implements GameOverDialog.GameOverDialogListener {
 
     // Dynamic views
     private ImageView gameBackground;
@@ -59,6 +59,11 @@ public class GameActivity extends AppCompatActivity {
     // Firestore
     private FirebaseFirestore db;
     private String userId;
+
+    // AdMob
+    private RewardedAdManager rewardedAdManager;
+    private int currentScore = 0;
+    private boolean gameActive = true;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -88,6 +93,11 @@ public class GameActivity extends AppCompatActivity {
             dy = JUMP_VELOCITY;
             tapCount++;
         });
+
+        // Initialize AdMob
+        RewardedAdManager.initialize(this);
+        rewardedAdManager = new RewardedAdManager();
+        rewardedAdManager.loadRewardedAd(this);
     }
 
     @Override
@@ -160,7 +170,7 @@ public class GameActivity extends AppCompatActivity {
             updateMovement();
             if (detectCollision()) {
                 handler.removeCallbacks(gameLoop);
-                saveGameAndFinish();
+                onGameFail();
             } else {
                 handler.postDelayed(gameLoop, FRAME_RATE_MS);
             }
@@ -315,6 +325,61 @@ public class GameActivity extends AppCompatActivity {
         finish();
     }
 
+    private void onGameFail() {
+        gameActive = false;
+
+        // Show game over dialog with option to continue via ad
+        GameOverDialog dialog = new GameOverDialog(
+                this,
+                this,
+                currentScore,
+                rewardedAdManager.isRewardedAdLoaded()
+        );
+        dialog.show();
+    }
+
+    // GameOverDialogListener implementation
+    @Override
+    public void onRestartGame() {
+        // Reset game state
+        currentScore = 0;
+        gameActive = true;
+        // Additional reset logic...
+    }
+
+    @Override
+    public void onContinueWithAd() {
+        rewardedAdManager.showRewardedAd(this, new RewardedAdManager.RewardedAdCallback() {
+            @Override
+            public void onAdRewarded() {
+                // User earned reward, continue the game without resetting score
+                gameActive = true;
+                // Resume game from current position...
+                runOnUiThread(() -> Toast.makeText(GameActivity.this,
+                        "Continue with current score: " + currentScore,
+                        Toast.LENGTH_SHORT).show());
+            }
+
+            @Override
+            public void onAdDismissed() {
+                // User closed the ad without completing it - handle accordingly
+                if (!gameActive) {
+                    // If game is still not active, restart
+                    onRestartGame();
+                }
+            }
+
+            @Override
+            public void onAdFailedToLoad() {
+                // Ad failed to load, restart game as fallback
+                Toast.makeText(GameActivity.this,
+                        "Ad failed to load. Restarting game.",
+                        Toast.LENGTH_SHORT).show();
+                onRestartGame();
+            }
+        });
+    }
+
     @Override
     protected void onPause() {
         super.onPause();
@@ -325,6 +390,11 @@ public class GameActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (gameLoop != null) handler.postDelayed(gameLoop, FRAME_RATE_MS);
+
+        // Load ad in advance for next failure
+        if (!rewardedAdManager.isRewardedAdLoaded()) {
+            rewardedAdManager.loadRewardedAd(this);
+        }
     }
 
     private int dpToPx(int dp) {
