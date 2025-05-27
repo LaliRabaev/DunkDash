@@ -48,12 +48,14 @@ public class FailActivity extends AppCompatActivity {
         // Set actual score
         scoreTextView.setText("Score: " + currentScore);
         
-        // Setup restart button
+        // Setup restart button - Modified to go back to HomePageActivity
         restartButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Restart the game by starting GameActivity
-                Intent intent = new Intent(FailActivity.this, GameActivity.class);
+                // Navigate back to HomePageActivity instead of GameActivity
+                Intent intent = new Intent(FailActivity.this, HomePageActivity.class);
+                // Clear the activity stack to prevent issues
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
                 finish(); // Close the current activity
             }
@@ -101,7 +103,8 @@ public class FailActivity extends AppCompatActivity {
     }
     
     private void restartGame() {
-        Intent intent = new Intent(FailActivity.this, GameActivity.class);
+        Intent intent = new Intent(FailActivity.this, HomePageActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         finish(); // Important to close this activity
     }
