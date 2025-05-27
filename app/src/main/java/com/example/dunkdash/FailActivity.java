@@ -42,7 +42,7 @@ public class FailActivity extends AppCompatActivity {
         
         // Initialize UI elements
         scoreTextView = findViewById(R.id.scoreTextView);
-        restartButton = findViewById(R.id.restartButton);
+        restartButton = findViewById(R.id.restart_button);
         watchAdButton = findViewById(R.id.watchAdButton);
         
         // Set actual score
@@ -52,7 +52,10 @@ public class FailActivity extends AppCompatActivity {
         restartButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                restartGame();
+                // Restart the game by starting GameActivity
+                Intent intent = new Intent(FailActivity.this, GameActivity.class);
+                startActivity(intent);
+                finish(); // Close the current activity
             }
         });
         
