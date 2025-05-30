@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:background="#FFF8F2"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="16dp">
 
     <!-- Top bar: Return button and Title -->
     <LinearLayout
@@ -14,11 +14,11 @@
         android:gravity="center_vertical">
 
         <Button
-            android:id="@+id/button_return_home"
-            android:layout_width="120dp"
-            android:layout_height="48dp"
+            android:id="@+id/btn_return"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:backgroundTint="#F57C00"
-            android:text="← Home"
+            android:text="Return"
             android:textSize="18sp"
             android:textColor="#FFFFFF"
             android:layout_marginEnd="16dp"
@@ -46,6 +46,8 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="16dp" />
+
+    <!-- TODO: Add RecyclerView/ListView for basketballs -->
 
     <!-- Grid of basketballs -->
     <GridLayout

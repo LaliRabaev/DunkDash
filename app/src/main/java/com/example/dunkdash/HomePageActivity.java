@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
 
 import androidx.annotation.Nullable;
@@ -50,20 +49,22 @@ public class HomePageActivity extends AppCompatActivity {
             return false;
         });
 
-        // 5) Icons → open selectors
+        // 5) Left column icons → open selectors
         findViewById(R.id.ball_icon).setOnClickListener(v ->
                 startActivity(new Intent(this, SelectBasketballsActivity.class))
         );
         findViewById(R.id.pitches_icon).setOnClickListener(v ->
                 startActivity(new Intent(this, SelectBackgroundsActivity.class))
         );
+        findViewById(R.id.skull_icon).setOnClickListener(v ->
+                startActivity(new Intent(this, SelectModesActivity.class))
+        );
+    }
 
-        // Connect Modes button to SelectModes activity
-        Button modesButton = findViewById(R.id.button_modes);
-        modesButton.setOnClickListener(v -> {
-            Intent intent = new Intent(HomePageActivity.this, SelectModes.class);
-            startActivity(intent);
-        });
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadUserSelections(); // Reload preferences when returning
     }
 
     private void loadUserSelections() {

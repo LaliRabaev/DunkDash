@@ -65,6 +65,9 @@ public class SelectBasketballsActivity extends AppCompatActivity {
             finish();
         });
 
+        Button btnReturn = findViewById(R.id.btn_return);
+        btnReturn.setOnClickListener(v -> finish());
+
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         FirebaseUser user = auth.getCurrentUser();

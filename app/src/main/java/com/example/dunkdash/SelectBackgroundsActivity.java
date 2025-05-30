@@ -58,13 +58,8 @@ public class SelectBackgroundsActivity extends AppCompatActivity {
         saveButton.setEnabled(false);
 
         // Add return button logic
-        Button returnButton = findViewById(R.id.button_return_home);
-        returnButton.setOnClickListener(v -> {
-            Intent intent = new Intent(SelectBackgroundsActivity.this, HomePageActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(intent);
-            finish();
-        });
+        Button returnButton = findViewById(R.id.btn_return);
+        returnButton.setOnClickListener(v -> finish());
 
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();

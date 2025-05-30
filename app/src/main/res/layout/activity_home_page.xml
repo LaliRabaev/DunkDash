@@ -39,15 +39,6 @@
         android:textSize="30sp"
         android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/button_modes"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Modes"
-        android:layout_marginTop="16dp"
-        android:layout_gravity="center_horizontal"
-        />
-
     <!-- Right‑side icon column -->
     <LinearLayout
         android:id="@+id/iconContainerRight"
@@ -94,19 +85,25 @@
             android:layout_width="65dp"
             android:layout_height="65dp"
             android:layout_marginBottom="8dp"
-            android:src="@drawable/ball_icon" />
+            android:src="@drawable/ball_icon"
+            android:clickable="true"
+            android:focusable="true" />
 
         <ImageView
             android:id="@+id/pitches_icon"
             android:layout_width="65dp"
             android:layout_height="65dp"
             android:layout_marginBottom="8dp"
-            android:src="@drawable/pitches_icon" />
+            android:src="@drawable/pitches_icon"
+            android:clickable="true"
+            android:focusable="true" />
 
         <ImageView
             android:id="@+id/skull_icon"
             android:layout_width="65dp"
             android:layout_height="65dp"
-            android:src="@drawable/skull_icon" />
+            android:src="@drawable/skull_icon"
+            android:clickable="true"
+            android:focusable="true" />
     </LinearLayout>
 </RelativeLayout>
