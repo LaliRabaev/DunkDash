@@ -6,6 +6,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.Intent;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -29,6 +30,15 @@ public class SelectModes extends AppCompatActivity {
             editor.putString("selected_mode", selectedMode);
             editor.apply();
             Toast.makeText(this, "Saved: " + selectedMode, Toast.LENGTH_SHORT).show();
+        });
+
+        // Add return button logic
+        Button returnButton = findViewById(R.id.button_return_home);
+        returnButton.setOnClickListener(v -> {
+            Intent intent = new Intent(SelectModes.this, HomePageActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(intent);
+            finish();
         });
 
         setupModeClick(R.id.mode_easy, "Easy");

@@ -12,6 +12,7 @@ import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.Intent;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
@@ -54,6 +55,15 @@ public class SelectBasketballsActivity extends AppCompatActivity {
         selectedBallText = findViewById(R.id.selected_ball_text);
         saveButton = findViewById(R.id.save_button);
         saveButton.setEnabled(false);
+
+        // Add return button logic
+        Button returnButton = findViewById(R.id.button_return_home);
+        returnButton.setOnClickListener(v -> {
+            Intent intent = new Intent(SelectBasketballsActivity.this, HomePageActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(intent);
+            finish();
+        });
 
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
