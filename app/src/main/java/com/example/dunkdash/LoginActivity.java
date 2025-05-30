@@ -22,9 +22,9 @@ public class LoginActivity extends AppCompatActivity {
     private boolean isPasswordVisible = false;
     private FirebaseAuth mAuth;
 
-    // Developer credentials - change these to your test account
-    private static final String DEV_EMAIL = "dev@dunkdash.com";
-    private static final String DEV_PASSWORD = "devpassword123";
+    // Developer credentials - UPDATE THESE TO MATCH YOUR EXISTING FIREBASE USER
+    private static final String DEV_EMAIL = "your-existing-test@email.com";
+    private static final String DEV_PASSWORD = "your-existing-password";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
