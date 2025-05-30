@@ -22,9 +22,8 @@ public class LoginActivity extends AppCompatActivity {
     private boolean isPasswordVisible = false;
     private FirebaseAuth mAuth;
 
-    // Developer credentials - NEW TEST USER
-    private static final String DEV_EMAIL = "test@dunkdash.com";with real email
-    private static final String DEV_PASSWORD = "testpass123"; with real password
+    private static final String DEV_EMAIL = "yonatan2704@gmail.com";
+    private static final String DEV_PASSWORD = "Yona@5674";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
