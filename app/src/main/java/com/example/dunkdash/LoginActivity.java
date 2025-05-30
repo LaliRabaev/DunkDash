@@ -17,10 +17,14 @@ import com.google.firebase.auth.FirebaseUser;
 public class LoginActivity extends AppCompatActivity {
 
     private EditText etUsername, etPassword;
-    private Button btnDone, btnSignup;
+    private Button btnDone, btnSignup, btnDevLogin;
     private ImageButton btnTogglePassword;
     private boolean isPasswordVisible = false;
     private FirebaseAuth mAuth;
+
+    // Developer credentials - change these to your test account
+    private static final String DEV_EMAIL = "dev@dunkdash.com";
+    private static final String DEV_PASSWORD = "devpassword123";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,6 +36,7 @@ public class LoginActivity extends AppCompatActivity {
         btnDone = findViewById(R.id.doneButton);
         btnSignup = findViewById(R.id.signupButton);
         btnTogglePassword = findViewById(R.id.togglePasswordVisibility);
+        btnDevLogin = findViewById(R.id.devLoginButton);
         mAuth = FirebaseAuth.getInstance();
 
         // Setup password visibility toggle
@@ -65,6 +70,14 @@ public class LoginActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+
+        // Developer login button
+        btnDevLogin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                performDevLogin();
+            }
+        });
     }
 
     private void togglePasswordVisibility() {
@@ -95,5 +108,16 @@ public class LoginActivity extends AppCompatActivity {
                         Toast.makeText(LoginActivity.this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
+    }
+
+    private void performDevLogin() {
+        // Fill in the credentials for visual feedback
+        etUsername.setText(DEV_EMAIL);
+        etPassword.setText(DEV_PASSWORD);
+        
+        // Perform automatic login
+        loginUser(DEV_EMAIL, DEV_PASSWORD);
+        
+        Toast.makeText(this, "Developer login initiated...", Toast.LENGTH_SHORT).show();
     }
 }
