@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 
 import androidx.annotation.Nullable;
@@ -56,6 +57,13 @@ public class HomePageActivity extends AppCompatActivity {
         findViewById(R.id.pitches_icon).setOnClickListener(v ->
                 startActivity(new Intent(this, SelectBackgroundsActivity.class))
         );
+
+        // Connect Modes button to SelectModes activity
+        Button modesButton = findViewById(R.id.button_modes);
+        modesButton.setOnClickListener(v -> {
+            Intent intent = new Intent(HomePageActivity.this, SelectModes.class);
+            startActivity(intent);
+        });
     }
 
     private void loadUserSelections() {
