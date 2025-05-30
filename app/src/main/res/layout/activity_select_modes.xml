@@ -1,43 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFDF7"
-    android:padding="16dp">
+    android:orientation="vertical"
+    android:padding="24dp">
 
-    <!-- כותרת -->
-    <TextView
-        android:id="@+id/modes_title"
-        android:layout_width="wrap_content"
+    <!-- Top bar: Return button and Title -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="🎮 MODES:"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:textColor="#3F51B5"
-        android:layout_centerHorizontal="true"
-        android:layout_alignParentTop="true"
-        android:layout_marginBottom="24dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-    <!-- Return Button -->
-    <Button
-        android:id="@+id/button_return_home"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Return"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:layout_margin="16dp"/>
+        <Button
+            android:id="@+id/button_return_home"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:text="←"
+            android:textSize="20sp"
+            android:textColor="#3F51B5"
+            android:layout_marginEnd="12dp"
+            android:elevation="2dp"/>
 
-    <!-- Grid של מצבים -->
+        <TextView
+            android:id="@+id/modes_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select Mode"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#3F51B5"
+            android:layout_gravity="center_vertical"/>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="16dp" />
+
+    <!-- Grid of modes -->
     <GridLayout
         android:id="@+id/modes_grid"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/modes_title"
-        android:layout_centerHorizontal="true"
         android:columnCount="3"
+        android:useDefaultMargins="true"
         android:alignmentMode="alignMargins"
-        android:useDefaultMargins="true">
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp">
 
         <!-- Easy -->
         <LinearLayout
@@ -47,7 +58,8 @@
             android:gravity="center"
             android:background="#C8E6C9"
             android:padding="8dp"
-            android:layout_margin="8dp">
+            android:layout_margin="8dp"
+            android:elevation="1dp">
 
             <ImageView
                 android:id="@+id/mode_easy"
@@ -76,7 +88,8 @@
             android:gravity="center"
             android:background="#FFF9C4"
             android:padding="8dp"
-            android:layout_margin="8dp">
+            android:layout_margin="8dp"
+            android:elevation="1dp">
 
             <ImageView
                 android:id="@+id/mode_medium"
@@ -105,7 +118,8 @@
             android:gravity="center"
             android:background="#FFCDD2"
             android:padding="8dp"
-            android:layout_margin="8dp">
+            android:layout_margin="8dp"
+            android:elevation="1dp">
 
             <ImageView
                 android:id="@+id/mode_hard"
@@ -127,30 +141,29 @@
         </LinearLayout>
     </GridLayout>
 
-    <!-- תצוגת מצב נבחר -->
+    <!-- Selected Mode -->
     <TextView
         android:id="@+id/selected_mode_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Selected: None"
-        android:textSize="18sp"
-        android:textColor="#000000"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/modes_grid"
-        android:layout_marginTop="24dp" />
+        android:textSize="16sp"
+        android:textColor="#333333"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp" />
 
-    <!-- כפתור Save -->
+    <!-- Save Button -->
     <Button
         android:id="@+id/save_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:layout_height="48dp"
         android:text="Save"
         android:textAllCaps="false"
         android:textColor="#FFFFFF"
         android:backgroundTint="#3F51B5"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/selected_mode_text"
-        android:layout_marginTop="16dp"
-        android:paddingLeft="24dp"
-        android:paddingRight="24dp" />
-</RelativeLayout>
+        android:layout_gravity="center_horizontal"
+        android:textSize="16sp"
+        android:elevation="2dp"
+        android:layout_marginTop="8dp"/>
+</LinearLayout>
