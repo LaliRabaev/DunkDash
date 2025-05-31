@@ -49,6 +49,7 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
         private TextView maxScoreText;
         private TextView totalGamesText;
         private TextView trophyText;
+        private TextView youIndicator;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -57,6 +58,7 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
             maxScoreText = itemView.findViewById(R.id.max_score_text);
             totalGamesText = itemView.findViewById(R.id.total_games_text);
             trophyText = itemView.findViewById(R.id.trophy_text);
+            youIndicator = itemView.findViewById(R.id.you_indicator);
         }
 
         public void bind(LeaderboardPlayer player, String currentUserId) {
@@ -71,12 +73,14 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
                 rankText.setVisibility(View.VISIBLE);
             }
 
-            // Set nickname with current user marker
-            String displayName = player.getNickname();
+            // Set nickname and show/hide "You" indicator
+            nicknameText.setText(player.getNickname());
+            
             if (currentUserId != null && currentUserId.equals(player.getUserId())) {
-                displayName += " (You)";
+                youIndicator.setVisibility(View.VISIBLE);
+            } else {
+                youIndicator.setVisibility(View.GONE);
             }
-            nicknameText.setText(displayName);
 
             maxScoreText.setText(String.valueOf(player.getMaxScore()));
             totalGamesText.setText(player.getTotalGames() + " games");
