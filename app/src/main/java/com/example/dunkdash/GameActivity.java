@@ -405,7 +405,8 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     private void incrementScore() {
         if (gameActive) {
             score++;
-            updateScoreDisplay();
+            // Ensure UI update happens on main thread
+            runOnUiThread(this::updateScoreDisplay);
         }
     }
 
