@@ -72,11 +72,13 @@ public class LeaderboardActivity extends AppCompatActivity {
 
     private void loadLeaderboard() {
         if (currentUser == null) {
+            Log.w(TAG, "User not authenticated");
             showEmptyState(true);
             emptyStateText.setText("Please log in to view leaderboard");
             return;
         }
 
+        Log.d(TAG, "Loading leaderboard for user: " + currentUser.getUid());
         showLoading(true);
 
         db.collection("users")
@@ -84,6 +86,7 @@ public class LeaderboardActivity extends AppCompatActivity {
                 .limit(TOP_PLAYERS_LIMIT)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
+                    Log.d(TAG, "Leaderboard query successful, got " + querySnapshot.size() + " documents");
                     List<LeaderboardPlayer> players = new ArrayList<>();
                     int rank = 1;
 
@@ -123,13 +126,14 @@ public class LeaderboardActivity extends AppCompatActivity {
                     Log.d(TAG, "Loaded " + players.size() + " players for leaderboard");
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load leaderboard", e);
+                    Log.e(TAG, "Failed to load leaderboard: " + e.getClass().getSimpleName() + " - " + e.getMessage(), e);
                     showLoading(false);
 
                     // Check if it's a permission error
                     if (e.getMessage() != null && e.getMessage().contains("PERMISSION_DENIED")) {
                         showEmptyState(true);
-                        emptyStateText.setText("Unable to access leaderboard.\nPlease check your permissions.");
+                        emptyStateText.setText("Unable to access leaderboard.\nFirestore permissions need updating.");
+                        Log.e(TAG, "PERMISSION_DENIED: Update Firestore rules to allow leaderboard queries");
                     } else {
                         showEmptyState(true);
                         emptyStateText.setText("Failed to load leaderboard.\nPlease try again later.");
