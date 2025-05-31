@@ -16,18 +16,16 @@
         android:background="#DDDDDD"
         android:src="@null" />
 
-    <!-- User info panel at top -->
+    <!-- User info panel at top - removed background and moved higher -->
     <LinearLayout
         android:id="@+id/user_info_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="20dp"
         android:layout_marginHorizontal="16dp"
-        android:background="#80000000"
-        android:padding="16dp"
-        android:orientation="vertical"
-        android:elevation="4dp">
+        android:padding="12dp"
+        android:orientation="vertical">
 
         <TextView
             android:id="@+id/greeting_text"
@@ -37,12 +35,16 @@
             android:textColor="#FFFFFF"
             android:textSize="24sp"
             android:textStyle="bold"
-            android:layout_gravity="center" />
+            android:layout_gravity="center"
+            android:shadowColor="#000000"
+            android:shadowDx="2"
+            android:shadowDy="2"
+            android:shadowRadius="4" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal"
             android:gravity="center">
 
@@ -60,14 +62,22 @@
                     android:text="0"
                     android:textColor="#FFD700"
                     android:textSize="22sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:shadowColor="#000000"
+                    android:shadowDx="2"
+                    android:shadowDy="2"
+                    android:shadowRadius="4" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Best Score"
                     android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
+                    android:textSize="12sp"
+                    android:shadowColor="#000000"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="3" />
 
             </LinearLayout>
 
@@ -75,7 +85,7 @@
                 android:layout_width="1dp"
                 android:layout_height="40dp"
                 android:background="#FFFFFF"
-                android:alpha="0.5" />
+                android:alpha="0.8" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -91,14 +101,22 @@
                     android:text="0"
                     android:textColor="#87CEEB"
                     android:textSize="22sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:shadowColor="#000000"
+                    android:shadowDx="2"
+                    android:shadowDy="2"
+                    android:shadowRadius="4" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Games Played"
                     android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
+                    android:textSize="12sp"
+                    android:shadowColor="#000000"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="3" />
 
             </LinearLayout>
 
