@@ -13,16 +13,14 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QuerySnapshot;
 
 public class HomePageActivity extends AppCompatActivity {
     private static final String TAG = "HomePageActivity";
 
     private boolean gameStarted = false;
     private ImageView homeBackground, playerBasketball;
-    private TextView greetingText, maxScoreValue, totalGamesValue;
+    private TextView greetingText;
     private FirebaseFirestore db;
     private FirebaseUser currentUser;
 
@@ -37,8 +35,6 @@ public class HomePageActivity extends AppCompatActivity {
 
         // 2) Bind user info TextViews
         greetingText = findViewById(R.id.greeting_text);
-        maxScoreValue = findViewById(R.id.max_score_value);
-        totalGamesValue = findViewById(R.id.total_games_value);
 
         // 3) Init Firebase
         db = FirebaseFirestore.getInstance();
@@ -71,6 +67,10 @@ public class HomePageActivity extends AppCompatActivity {
         );
         
         // 7) Right column icons
+        findViewById(R.id.cup_icon).setOnClickListener(v -> {
+            Log.d(TAG, "Cup icon clicked!");
+            startActivity(new Intent(this, UserProfileActivity.class));
+        });
         findViewById(R.id.leaderboard_icon).setOnClickListener(v -> {
             Log.d(TAG, "Leaderboard icon clicked!");
             startActivity(new Intent(this, LeaderboardActivity.class));
@@ -130,8 +130,6 @@ public class HomePageActivity extends AppCompatActivity {
     private void loadUserInfo() {
         if (currentUser == null) {
             greetingText.setText("Hello, Guest!");
-            maxScoreValue.setText("0");
-            totalGamesValue.setText("0");
             return;
         }
 
@@ -141,8 +139,6 @@ public class HomePageActivity extends AppCompatActivity {
                 .addOnSuccessListener(userDoc -> {
                     if (!userDoc.exists()) {
                         greetingText.setText("Hello, Player!");
-                        maxScoreValue.setText("0");
-                        totalGamesValue.setText("0");
                         return;
                     }
 
@@ -165,30 +161,11 @@ public class HomePageActivity extends AppCompatActivity {
                     String greeting = getTimeBasedGreeting() + ", " + nickname + "!";
                     greetingText.setText(greeting);
 
-                    // Get and display max score
-                    Long maxScore = userDoc.getLong("max_score");
-                    if (maxScore != null) {
-                        maxScoreValue.setText(String.valueOf(maxScore));
-                    } else {
-                        maxScoreValue.setText("0");
-                    }
-
-                    // Get and display total games
-                    Long totalGames = userDoc.getLong("total_games");
-                    if (totalGames != null) {
-                        totalGamesValue.setText(String.valueOf(totalGames));
-                    } else {
-                        totalGamesValue.setText("0");
-                    }
-
-                    Log.d(TAG, "User info loaded - Nickname: " + nickname +
-                            ", Max Score: " + maxScore + ", Total Games: " + totalGames);
+                    Log.d(TAG, "User info loaded - Nickname: " + nickname);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load user info", e);
                     greetingText.setText("Hello, Player!");
-                    maxScoreValue.setText("0");
-                    totalGamesValue.setText("0");
                 });
     }
 
