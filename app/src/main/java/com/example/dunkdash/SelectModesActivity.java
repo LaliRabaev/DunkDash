@@ -127,6 +127,7 @@ public class SelectModesActivity extends AppCompatActivity {
 
     private void createModeCard(QueryDocumentSnapshot doc) {
         int id = doc.getLong("id").intValue();
+        String name = doc.getString("name"); // Add this line to extract name from document
         Long speed = doc.getLong("speed"); // Get speed value
         long minScore = getMinScore(doc);
         boolean unlocked = userMaxScore >= minScore;
