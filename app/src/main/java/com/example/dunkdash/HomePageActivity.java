@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -21,6 +22,7 @@ public class HomePageActivity extends AppCompatActivity {
 
     private boolean gameStarted = false;
     private ImageView homeBackground, playerBasketball;
+    private TextView greetingText, maxScoreValue, totalGamesValue;
     private FirebaseFirestore db;
     private FirebaseUser currentUser;
 
@@ -33,14 +35,20 @@ public class HomePageActivity extends AppCompatActivity {
         homeBackground   = findViewById(R.id.home_background);
         playerBasketball = findViewById(R.id.player_basketball);
 
-        // 2) Init Firebase
+        // 2) Bind user info TextViews
+        greetingText = findViewById(R.id.greeting_text);
+        maxScoreValue = findViewById(R.id.max_score_value);
+        totalGamesValue = findViewById(R.id.total_games_value);
+
+        // 3) Init Firebase
         db = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
-        // 3) Load & apply saved selections
+        // 4) Load & apply saved selections and user info
         loadUserSelections();
+        loadUserInfo();
 
-        // 4) First tap anywhere → start game
+        // 5) First tap anywhere → start game
         View root = findViewById(R.id.rootLayout);
         root.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN && !gameStarted) {
@@ -51,7 +59,7 @@ public class HomePageActivity extends AppCompatActivity {
             return false;
         });
 
-        // 5) Left column icons → open selectors
+        // 6) Left column icons → open selectors
         findViewById(R.id.ball_icon).setOnClickListener(v ->
                 startActivity(new Intent(this, SelectBasketballsActivity.class))
         );
@@ -69,6 +77,7 @@ public class HomePageActivity extends AppCompatActivity {
         // Reset game started flag when returning to home
         gameStarted = false;
         loadUserSelections(); // Reload preferences when returning
+        loadUserInfo(); // Reload user stats when returning
     }
 
     private void loadUserSelections() {
@@ -111,6 +120,86 @@ public class HomePageActivity extends AppCompatActivity {
                                 .addOnSuccessListener(this::applyMode);
                     }
                 });
+    }
+
+    private void loadUserInfo() {
+        if (currentUser == null) {
+            greetingText.setText("Hello, Guest!");
+            maxScoreValue.setText("0");
+            totalGamesValue.setText("0");
+            return;
+        }
+
+        String uid = currentUser.getUid();
+        db.collection("users").document(uid)
+                .get()
+                .addOnSuccessListener(userDoc -> {
+                    if (!userDoc.exists()) {
+                        greetingText.setText("Hello, Player!");
+                        maxScoreValue.setText("0");
+                        totalGamesValue.setText("0");
+                        return;
+                    }
+
+                    // Get user nickname or fallback to email/default
+                    String nickname = userDoc.getString("nickname");
+                    if (nickname == null || nickname.trim().isEmpty()) {
+                        nickname = userDoc.getString("name");
+                    }
+                    if (nickname == null || nickname.trim().isEmpty()) {
+                        String email = currentUser.getEmail();
+                        if (email != null && !email.isEmpty()) {
+                            // Use part before @ as nickname
+                            nickname = email.split("@")[0];
+                        } else {
+                            nickname = "Player";
+                        }
+                    }
+
+                    // Set greeting with time-based message
+                    String greeting = getTimeBasedGreeting() + ", " + nickname + "!";
+                    greetingText.setText(greeting);
+
+                    // Get and display max score
+                    Long maxScore = userDoc.getLong("max_score");
+                    if (maxScore != null) {
+                        maxScoreValue.setText(String.valueOf(maxScore));
+                    } else {
+                        maxScoreValue.setText("0");
+                    }
+
+                    // Get and display total games
+                    Long totalGames = userDoc.getLong("total_games");
+                    if (totalGames != null) {
+                        totalGamesValue.setText(String.valueOf(totalGames));
+                    } else {
+                        totalGamesValue.setText("0");
+                    }
+
+                    Log.d(TAG, "User info loaded - Nickname: " + nickname + 
+                              ", Max Score: " + maxScore + ", Total Games: " + totalGames);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to load user info", e);
+                    greetingText.setText("Hello, Player!");
+                    maxScoreValue.setText("0");
+                    totalGamesValue.setText("0");
+                });
+    }
+
+    private String getTimeBasedGreeting() {
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+        
+        if (hour >= 5 && hour < 12) {
+            return "Good Morning";
+        } else if (hour >= 12 && hour < 17) {
+            return "Good Afternoon";
+        } else if (hour >= 17 && hour < 22) {
+            return "Good Evening";
+        } else {
+            return "Good Night";
+        }
     }
 
     private void applyBackground(QuerySnapshot qs) {
