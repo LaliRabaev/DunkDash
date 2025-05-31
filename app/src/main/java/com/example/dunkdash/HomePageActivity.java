@@ -70,10 +70,11 @@ public class HomePageActivity extends AppCompatActivity {
                 startActivity(new Intent(this, SelectModesActivity.class))
         );
         
-        // Add leaderboard button click handler
-        findViewById(R.id.leaderboard_icon).setOnClickListener(v ->
-                startActivity(new Intent(this, LeaderboardActivity.class))
-        );
+        // 7) Right column icons
+        findViewById(R.id.leaderboard_icon).setOnClickListener(v -> {
+            Log.d(TAG, "Leaderboard icon clicked!");
+            startActivity(new Intent(this, LeaderboardActivity.class));
+        });
     }
 
     @Override
@@ -81,19 +82,18 @@ public class HomePageActivity extends AppCompatActivity {
         super.onResume();
         // Reset game started flag when returning to home
         gameStarted = false;
+        if (currentUser == null) return;
         loadUserSelections(); // Reload preferences when returning
         loadUserInfo(); // Reload user stats when returning
     }
 
     private void loadUserSelections() {
         if (currentUser == null) return;
-
         String uid = currentUser.getUid();
         db.collection("users").document(uid)
                 .get()
                 .addOnSuccessListener(userDoc -> {
                     if (!userDoc.exists()) return;
-
                     Long bgId   = userDoc.getLong("current_background");
                     Long ballId = userDoc.getLong("current_basketball");
                     Long modeId = userDoc.getLong("current_mode");
@@ -181,8 +181,8 @@ public class HomePageActivity extends AppCompatActivity {
                         totalGamesValue.setText("0");
                     }
 
-                    Log.d(TAG, "User info loaded - Nickname: " + nickname + 
-                              ", Max Score: " + maxScore + ", Total Games: " + totalGames);
+                    Log.d(TAG, "User info loaded - Nickname: " + nickname +
+                            ", Max Score: " + maxScore + ", Total Games: " + totalGames);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load user info", e);
@@ -248,15 +248,12 @@ public class HomePageActivity extends AppCompatActivity {
             Log.w(TAG, "Empty or null path provided");
             return 0;
         }
-        
         String name = path.trim();
         Log.d(TAG, "Original path: " + name);
-        
         // Remove drawable/ prefix if present
         if (name.startsWith("drawable/")) {
             name = name.substring("drawable/".length());
         }
-        
         // Remove any file extension
         int lastDot = name.lastIndexOf('.');
         if (lastDot > 0) {
@@ -269,15 +266,14 @@ public class HomePageActivity extends AppCompatActivity {
         if (resId == 0) {
             Log.w(TAG, "Resource not found for name: " + name + " in package: " + getPackageName());
         }
-        
         return resId;
     }
 
     private void startGame() {
-        Intent intent = new Intent(this, GameActivity.class);
         // Clear any previous game state flags
-        intent.removeExtra("continue");
+        Intent intent = new Intent(this, GameActivity.class);
         intent.removeExtra("score");
+        intent.removeExtra("continue");
         startActivity(intent);
         // Don't finish() here - let user return to home
     }
