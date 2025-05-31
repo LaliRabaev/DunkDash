@@ -11,6 +11,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -28,6 +30,8 @@ public class LeaderboardActivity extends AppCompatActivity {
     private TextView emptyStateText;
     private ImageButton backButton;
     private FirebaseFirestore db;
+    private FirebaseAuth auth;
+    private FirebaseUser currentUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,7 +40,17 @@ public class LeaderboardActivity extends AppCompatActivity {
 
         initViews();
         setupRecyclerView();
-        loadLeaderboard();
+
+        // Check authentication before loading leaderboard
+        auth = FirebaseAuth.getInstance();
+        currentUser = auth.getCurrentUser();
+
+        if (currentUser != null) {
+            loadLeaderboard();
+        } else {
+            showEmptyState(true);
+            emptyStateText.setText("Please log in to view leaderboard");
+        }
     }
 
     private void initViews() {
@@ -57,6 +71,12 @@ public class LeaderboardActivity extends AppCompatActivity {
     }
 
     private void loadLeaderboard() {
+        if (currentUser == null) {
+            showEmptyState(true);
+            emptyStateText.setText("Please log in to view leaderboard");
+            return;
+        }
+
         showLoading(true);
 
         db.collection("users")
@@ -70,7 +90,7 @@ public class LeaderboardActivity extends AppCompatActivity {
                     for (QueryDocumentSnapshot doc : querySnapshot) {
                         Long maxScore = doc.getLong("max_score");
                         Long totalGames = doc.getLong("total_games");
-                        
+
                         // Skip users with no max score
                         if (maxScore == null || maxScore == 0) continue;
 
@@ -105,7 +125,15 @@ public class LeaderboardActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load leaderboard", e);
                     showLoading(false);
-                    showEmptyState(true);
+
+                    // Check if it's a permission error
+                    if (e.getMessage() != null && e.getMessage().contains("PERMISSION_DENIED")) {
+                        showEmptyState(true);
+                        emptyStateText.setText("Unable to access leaderboard.\nPlease check your permissions.");
+                    } else {
+                        showEmptyState(true);
+                        emptyStateText.setText("Failed to load leaderboard.\nPlease try again later.");
+                    }
                 });
     }
 
