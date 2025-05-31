@@ -126,19 +126,20 @@ public class SelectModesActivity extends AppCompatActivity {
     private void loadDefaultModes() {
         Log.d(TAG, "Creating default game modes");
         
-        // Create default game modes
-        createDefaultModeCard(1, "Easy", "😊", "Perfect for beginners • Relaxed gameplay", 0, 5);
-        createDefaultModeCard(2, "Medium", "😐", "Balanced challenge • Good for improving", 100, 10);
-        createDefaultModeCard(3, "Hard", "💀", "Ultimate challenge • For skilled players only", 500, 15);
+        // Create default game modes - all unlocked, using realistic speeds
+        createDefaultModeCard(1, "Easy", "😊", "Perfect for beginners • Relaxed gameplay", 3);
+        createDefaultModeCard(2, "Medium", "😐", "Balanced challenge • Good for improving", 5);
+        createDefaultModeCard(3, "Hard", "💀", "Ultimate challenge • For skilled players only", 8);
         
         showLoading(false);
         Log.d(TAG, "Finished creating default game modes");
     }
     
-    private void createDefaultModeCard(int id, String name, String emoji, String description, long minScore, int speed) {
-        boolean unlocked = userMaxScore >= minScore;
+    private void createDefaultModeCard(int id, String name, String emoji, String description, int speed) {
+        // All modes are unlocked
+        boolean unlocked = true;
         
-        Log.d(TAG, "Creating default mode: " + name + " (ID: " + id + ", Speed: " + speed + ", MinScore: " + minScore + ", Unlocked: " + unlocked + ")");
+        Log.d(TAG, "Creating default mode: " + name + " (ID: " + id + ", Speed: " + speed + ", Unlocked: " + unlocked + ")");
 
         // Create card container
         LinearLayout card = new LinearLayout(this);
@@ -152,7 +153,7 @@ public class SelectModesActivity extends AppCompatActivity {
         cardParams.setMargins(0, 0, 0, dpToPx(12));
         card.setLayoutParams(cardParams);
 
-        // Set special background based on mode type and unlock status
+        // Set special background based on mode type
         setModeCardBackground(card, name, unlocked);
 
         // Header container (emoji + name + selection indicator)
@@ -197,15 +198,10 @@ public class SelectModesActivity extends AppCompatActivity {
         descriptionText.setTextSize(14);
         descriptionText.setPadding(0, dpToPx(4), 0, dpToPx(8));
 
-        // Status text
+        // Status text - always available
         TextView statusText = new TextView(this);
-        if (unlocked) {
-            statusText.setText("✅ Unlocked");
-            statusText.setTextColor(0xFF4CAF50); // Green
-        } else {
-            statusText.setText("🔒 Requires " + minScore + " points");
-            statusText.setTextColor(0xFFFFB74D); // Orange
-        }
+        statusText.setText("✅ Available");
+        statusText.setTextColor(0xFF4CAF50); // Green
         statusText.setTextSize(14);
         statusText.setTypeface(null, android.graphics.Typeface.BOLD);
 
@@ -232,14 +228,8 @@ public class SelectModesActivity extends AppCompatActivity {
         // Add header to card
         card.addView(headerContainer);
 
-        // Set click listener
-        if (unlocked) {
-            card.setOnClickListener(v -> selectMode(id, name, card, selectionIndicator));
-        } else {
-            card.setOnClickListener(v -> {
-                Toast.makeText(this, "🔒 Unlock by reaching " + minScore + " points!", Toast.LENGTH_SHORT).show();
-            });
-        }
+        // Set click listener - all modes are selectable
+        card.setOnClickListener(v -> selectMode(id, name, card, selectionIndicator));
 
         modesContainer.addView(card);
         
@@ -287,10 +277,10 @@ public class SelectModesActivity extends AppCompatActivity {
         final String finalName = name;
         
         Long speed = doc.getLong("speed");
-        long minScore = getMinScore(doc);
-        boolean unlocked = userMaxScore >= minScore;
+        // All modes are unlocked
+        boolean unlocked = true;
 
-        Log.d(TAG, "Processing mode: " + finalName + " (ID: " + id + ", Speed: " + speed + ", MinScore: " + minScore + ", Unlocked: " + unlocked + ")");
+        Log.d(TAG, "Processing mode: " + finalName + " (ID: " + id + ", Speed: " + speed + ", Unlocked: " + unlocked + ")");
 
         // Create card container
         LinearLayout card = new LinearLayout(this);
@@ -304,7 +294,7 @@ public class SelectModesActivity extends AppCompatActivity {
         cardParams.setMargins(0, 0, 0, dpToPx(12));
         card.setLayoutParams(cardParams);
 
-        // Set special background based on mode type and unlock status
+        // Set special background based on mode type
         setModeCardBackground(card, finalName, unlocked);
 
         // Header container (emoji + name + selection indicator)
@@ -352,15 +342,10 @@ public class SelectModesActivity extends AppCompatActivity {
         descriptionText.setTextSize(14);
         descriptionText.setPadding(0, dpToPx(4), 0, dpToPx(8));
 
-        // Status text
+        // Status text - always available
         TextView statusText = new TextView(this);
-        if (unlocked) {
-            statusText.setText("✅ Unlocked");
-            statusText.setTextColor(0xFF4CAF50); // Green
-        } else {
-            statusText.setText("🔒 Requires " + minScore + " points");
-            statusText.setTextColor(0xFFFFB74D); // Orange
-        }
+        statusText.setText("✅ Available");
+        statusText.setTextColor(0xFF4CAF50); // Green
         statusText.setTextSize(14);
         statusText.setTypeface(null, android.graphics.Typeface.BOLD);
 
@@ -387,28 +372,17 @@ public class SelectModesActivity extends AppCompatActivity {
         // Add header to card
         card.addView(headerContainer);
 
-        // Set click listener
-        if (unlocked) {
-            card.setOnClickListener(v -> selectMode(id, finalName, card, selectionIndicator));
-        } else {
-            card.setOnClickListener(v -> {
-                Toast.makeText(this, "🔒 Unlock by reaching " + minScore + " points!", Toast.LENGTH_SHORT).show();
-            });
-        }
+        // Set click listener - all modes are selectable
+        card.setOnClickListener(v -> selectMode(id, finalName, card, selectionIndicator));
 
         modesContainer.addView(card);
         
         // Debug logging
-        Log.d(TAG, "Created mode card: " + finalName + " (ID: " + id + ", Speed: " + speed + ", MinScore: " + minScore + ", Unlocked: " + unlocked + ")");
+        Log.d(TAG, "Created mode card: " + finalName + " (ID: " + id + ", Speed: " + speed + ", Unlocked: " + unlocked + ")");
     }
 
     private void setModeCardBackground(LinearLayout card, String modeName, boolean unlocked) {
-        if (!unlocked) {
-            card.setBackgroundResource(R.drawable.leaderboard_bronze_background);
-            return;
-        }
-
-        // Set special backgrounds based on mode type
+        // Set special backgrounds based on mode type (all are unlocked now)
         switch (modeName.toLowerCase()) {
             case "easy":
                 card.setBackgroundResource(R.drawable.leaderboard_normal_background);
@@ -422,32 +396,6 @@ public class SelectModesActivity extends AppCompatActivity {
             default:
                 card.setBackgroundResource(R.drawable.leaderboard_normal_background);
                 break;
-        }
-    }
-
-    private String getModeEmoji(String modeName) {
-        switch (modeName.toLowerCase()) {
-            case "easy":
-                return "😊";
-            case "medium":
-                return "😐";
-            case "hard":
-                return "💀";
-            default:
-                return "🎮";
-        }
-    }
-
-    private String getDefaultDescription(String modeName) {
-        switch (modeName.toLowerCase()) {
-            case "easy":
-                return "Perfect for beginners • Relaxed gameplay";
-            case "medium":
-                return "Balanced challenge • Good for improving";
-            case "hard":
-                return "Ultimate challenge • For skilled players only";
-            default:
-                return "A challenging game mode";
         }
     }
 
