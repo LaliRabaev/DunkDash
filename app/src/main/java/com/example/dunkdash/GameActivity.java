@@ -56,7 +56,8 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     // State
     private boolean leftActive = true, rightActive = true, prepared = false;
     private long startTime;
-    private int tapCount;
+    private int score = 0; // Use single score variable
+    private boolean gameActive = true;
 
     // Firestore
     private FirebaseFirestore db;
@@ -64,11 +65,8 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
 
     // AdMob
     private RewardedAdManager rewardedAdManager;
-    private int currentScore = 0;
-    private boolean gameActive = true;
 
     // Score
-    private int score;
     private TextView scoreTextView;
 
     @Override
@@ -97,8 +95,11 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
 
         // tap-to-jump listener
         findViewById(R.id.rootLayout).setOnClickListener(v -> {
-            dy = JUMP_VELOCITY;
-            tapCount++;
+            if (gameActive) {
+                dy = JUMP_VELOCITY;
+                score++; // Increment score on each tap
+                updateScoreDisplay();
+            }
         });
 
         // Initialize AdMob properly
@@ -111,29 +112,20 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     }
 
     private void initializeGame() {
-        // Check if continuing from an ad
+        // Always start fresh unless continuing from ad
         boolean continueGame = getIntent().getBooleanExtra("continue", false);
         if (continueGame) {
-            // Restore the previous score
             score = getIntent().getIntExtra("score", 0);
-            updateScoreDisplay();
-            // Additional logic to reset game state but keep the score
         } else {
-            // Normal game initialization
             score = 0;
-            updateScoreDisplay();
-            // Other initialization
         }
-
-        // Rest of your initialization code
+        updateScoreDisplay();
+        gameActive = true;
     }
 
     private void updateScoreDisplay() {
-        // Add null check to prevent crash
         if (scoreTextView != null) {
             scoreTextView.setText("Score: " + score);
-        } else {
-            Log.e("GameActivity", "scoreTextView is null. Make sure score_text_view exists in your layout.");
         }
     }
 
@@ -142,7 +134,7 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus && !prepared) {
             startTime = System.currentTimeMillis();
-            tapCount  = 0;
+            score = 0;
             addCones("left");
             addCones("right");
             prepared = true;
@@ -150,6 +142,185 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
             playerY = player.getY();
             startGameLoop();
         }
+    }
+
+    private void startGameLoop() {
+        gameLoop = () -> {
+            if (gameActive) {
+                updateMovement();
+                if (detectCollision()) {
+                    handler.removeCallbacks(gameLoop);
+                    onGameFail();
+                } else {
+                    handler.postDelayed(gameLoop, FRAME_RATE_MS);
+                }
+            }
+        };
+        handler.postDelayed(gameLoop, FRAME_RATE_MS);
+    }
+
+    private void onGameFail() {
+        gameActive = false;
+        handler.removeCallbacks(gameLoop);
+
+        // Show game over dialog with current score and ad availability
+        GameOverDialog dialog = new GameOverDialog(
+                this,
+                this,
+                score, // Use the correct score variable
+                rewardedAdManager.isRewardedAdLoaded()
+        );
+        dialog.show();
+    }
+
+    // GameOverDialogListener implementation
+    @Override
+    public void onRestartGame() {
+        // Save current game stats before restarting
+        saveGameAndFinish();
+    }
+
+    @Override
+    public void onContinueWithAd() {
+        rewardedAdManager.showRewardedAd(this, new RewardedAdManager.RewardedAdCallback() {
+            @Override
+            public void onAdRewarded() {
+                // User earned reward, continue the game
+                runOnUiThread(() -> {
+                    gameActive = true;
+                    // Reset player position to center
+                    resetPlayerPosition();
+                    // Clear current obstacles and regenerate
+                    resetObstacles();
+                    // Restart the game loop
+                    startGameLoop();
+                    Toast.makeText(GameActivity.this,
+                            "Continue with score: " + score,
+                            Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onAdDismissed() {
+                // User closed the ad without completing it
+                if (!gameActive) {
+                    onRestartGame();
+                }
+            }
+
+            @Override
+            public void onAdFailedToLoad() {
+                Toast.makeText(GameActivity.this,
+                        "Ad failed to load. Restarting game.",
+                        Toast.LENGTH_SHORT).show();
+                onRestartGame();
+            }
+        });
+    }
+
+    private void resetPlayerPosition() {
+        // Reset player to center of screen
+        int screenWidth = findViewById(R.id.rootLayout).getWidth();
+        int screenHeight = findViewById(R.id.rootLayout).getHeight();
+        
+        playerX = (screenWidth - player.getWidth()) / 2f;
+        playerY = (screenHeight - player.getHeight()) / 2f;
+        dx = 8f; // Reset horizontal velocity
+        dy = 0f; // Reset vertical velocity
+        
+        player.setX(playerX);
+        player.setY(playerY);
+    }
+
+    private void resetObstacles() {
+        // Clear existing obstacles
+        removeCones(leftContainer);
+        removeCones(rightContainer);
+        sideCones.clear();
+        
+        // Reset side states
+        leftActive = true;
+        rightActive = true;
+        
+        // Add new obstacles
+        addCones("left");
+        addCones("right");
+    }
+
+    private void saveGameAndFinish() {
+        if (userId == null) {
+            finishToHome();
+            return;
+        }
+        long now = System.currentTimeMillis();
+        double dur = (now - startTime) / 1000.0;
+
+        DocumentReference gameRef = db.collection("games").document();
+        String gameId = gameRef.getId();
+
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("id", gameId);
+        doc.put("user_id", userId);
+        doc.put("start_date", new Timestamp(new Date(startTime)));
+        doc.put("duration", dur);
+        doc.put("game_mode", 1);
+        doc.put("score", score); // Use score instead of tapCount
+
+        gameRef.set(doc)
+                .addOnSuccessListener(unused -> updateUserStats())
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Save game failed: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                    finishToHome();
+                });
+    }
+
+    private void updateUserStats() {
+        DocumentReference userRef = db.collection("users").document(userId);
+        db.runTransaction((Transaction.Function<Void>) tx -> {
+                    DocumentSnapshot snap = tx.get(userRef);
+                    long total = snap.contains("total_games") ? snap.getLong("total_games") : 0;
+                    long max   = snap.contains("max_score")   ? snap.getLong("max_score")   : 0;
+
+                    tx.update(userRef, "total_games", total + 1);
+                    if (score > max) {
+                        tx.update(userRef, "max_score", score);
+                    }
+                    return null;
+                }).addOnSuccessListener(aVoid -> finishToHome())
+                .addOnFailureListener(e -> finishToHome());
+    }
+
+    private void finishToHome() {
+        // Return to home page instead of FailActivity
+        Intent intent = new Intent(this, HomePageActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        handler.removeCallbacks(gameLoop);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (gameLoop != null && gameActive) {
+            handler.postDelayed(gameLoop, FRAME_RATE_MS);
+        }
+
+        // Load ad in advance for next failure
+        if (!rewardedAdManager.isRewardedAdLoaded()) {
+            rewardedAdManager.loadRewardedAd(this);
+        }
+    }
+
+    private int dpToPx(int dp) {
+        float d = getResources().getDisplayMetrics().density;
+        return Math.round(dp * d);
     }
 
     // ————— Dynamic Selection Loading —————
@@ -201,19 +372,6 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         return getResources().getIdentifier(name, "drawable", getPackageName());
     }
     // ————————————————————————————————
-
-    private void startGameLoop() {
-        gameLoop = () -> {
-            updateMovement();
-            if (detectCollision()) {
-                handler.removeCallbacks(gameLoop);
-                onGameFail();
-            } else {
-                handler.postDelayed(gameLoop, FRAME_RATE_MS);
-            }
-        };
-        handler.postDelayed(gameLoop, FRAME_RATE_MS);
-    }
 
     private void updateMovement() {
         playerX += dx;
@@ -311,138 +469,5 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
             }
         }
         return false;
-    }
-
-    private void saveGameAndFinish() {
-        if (userId == null) {
-            finishFail();
-            return;
-        }
-        long now = System.currentTimeMillis();
-        double dur = (now - startTime) / 1000.0;
-
-        DocumentReference gameRef = db.collection("games").document();
-        String gameId = gameRef.getId();
-
-        Map<String, Object> doc = new HashMap<>();
-        doc.put("id", gameId);
-        doc.put("user_id", userId);
-        doc.put("start_date", new Timestamp(new Date(startTime)));
-        doc.put("duration", dur);
-        doc.put("game_mode", 1);
-        doc.put("score", tapCount);
-
-        gameRef.set(doc)
-                .addOnSuccessListener(unused -> updateUserStats())
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Save game failed: " + e.getMessage(),
-                            Toast.LENGTH_SHORT).show();
-                    finishFail();
-                });
-    }
-
-    private void updateUserStats() {
-        DocumentReference userRef = db.collection("users").document(userId);
-        db.runTransaction((Transaction.Function<Void>) tx -> {
-                    DocumentSnapshot snap = tx.get(userRef);
-                    long total = snap.contains("total_games") ? snap.getLong("total_games") : 0;
-                    long max   = snap.contains("max_score")   ? snap.getLong("max_score")   : 0;
-
-                    tx.update(userRef, "total_games", total + 1);
-                    if (tapCount > max) {
-                        tx.update(userRef, "max_score", tapCount);
-                    }
-                    return null;
-                }).addOnSuccessListener(aVoid -> finishFail())
-                .addOnFailureListener(e -> finishFail());
-    }
-
-    private void finishFail() {
-        startActivity(new Intent(this, FailActivity.class));
-        finish();
-    }
-
-    private void handleGameOver() {
-        Intent intent = new Intent(GameActivity.this, FailActivity.class);
-        intent.putExtra("score", score);
-        startActivity(intent);
-        finish();
-    }
-
-    private void onGameFail() {
-        gameActive = false;
-
-        // Show game over dialog with option to continue via ad
-        GameOverDialog dialog = new GameOverDialog(
-                this,
-                this,
-                currentScore,
-                rewardedAdManager.isRewardedAdLoaded()
-        );
-        dialog.show();
-    }
-
-    // GameOverDialogListener implementation
-    @Override
-    public void onRestartGame() {
-        // Reset game state
-        currentScore = 0;
-        gameActive = true;
-        // Additional reset logic...
-    }
-
-    @Override
-    public void onContinueWithAd() {
-        rewardedAdManager.showRewardedAd(this, new RewardedAdManager.RewardedAdCallback() {
-            @Override
-            public void onAdRewarded() {
-                // User earned reward, continue the game without resetting score
-                gameActive = true;
-                // Resume game from current position...
-                runOnUiThread(() -> Toast.makeText(GameActivity.this,
-                        "Continue with current score: " + currentScore,
-                        Toast.LENGTH_SHORT).show());
-            }
-
-            @Override
-            public void onAdDismissed() {
-                // User closed the ad without completing it - handle accordingly
-                if (!gameActive) {
-                    // If game is still not active, restart
-                    onRestartGame();
-                }
-            }
-
-            @Override
-            public void onAdFailedToLoad() {
-                // Ad failed to load, restart game as fallback
-                Toast.makeText(GameActivity.this,
-                        "Ad failed to load. Restarting game.",
-                        Toast.LENGTH_SHORT).show();
-                onRestartGame();
-            }
-        });
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        handler.removeCallbacks(gameLoop);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (gameLoop != null) handler.postDelayed(gameLoop, FRAME_RATE_MS);
-
-        // Load ad in advance for next failure
-        if (!rewardedAdManager.isRewardedAdLoaded()) {
-            rewardedAdManager.loadRewardedAd(this);
-        }
-    }
-
-    private int dpToPx(int dp) {
-        float d = getResources().getDisplayMetrics().density;
-        return Math.round(dp * d);
     }
 }

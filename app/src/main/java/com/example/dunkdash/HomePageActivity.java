@@ -66,6 +66,8 @@ public class HomePageActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        // Reset game started flag when returning to home
+        gameStarted = false;
         loadUserSelections(); // Reload preferences when returning
     }
 
@@ -178,7 +180,11 @@ public class HomePageActivity extends AppCompatActivity {
     }
 
     private void startGame() {
-        startActivity(new Intent(this, GameActivity.class));
-        finish();
+        Intent intent = new Intent(this, GameActivity.class);
+        // Clear any previous game state flags
+        intent.removeExtra("continue");
+        intent.removeExtra("score");
+        startActivity(intent);
+        // Don't finish() here - let user return to home
     }
 }
