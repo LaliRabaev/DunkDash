@@ -93,12 +93,11 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         // load dynamic selections
         loadUserSelections();
 
-        // tap-to-jump listener
+        // tap-to-jump listener - no longer increments score
         findViewById(R.id.rootLayout).setOnClickListener(v -> {
             if (gameActive) {
                 dy = JUMP_VELOCITY;
-                score++; // Increment score on each tap
-                updateScoreDisplay();
+                // Score is now tracked by side bounces, not taps
             }
         });
 
@@ -382,11 +381,14 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         int w  = player.getRootView().getWidth();
         int h  = player.getRootView().getHeight();
 
+        // Track side bounces for scoring
         if (playerX <= 0) {
             dx = Math.abs(dx);
+            incrementScore(); // Score when bouncing off left side
             swapSide(false, true);
         } else if (playerX + pw >= w) {
             dx = -Math.abs(dx);
+            incrementScore(); // Score when bouncing off right side
             swapSide(true, false);
         }
 
@@ -399,6 +401,13 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
 
         player.setX(playerX);
         player.setY(playerY);
+    }
+
+    private void incrementScore() {
+        if (gameActive) {
+            score++;
+            updateScoreDisplay();
+        }
     }
 
     private void swapSide(boolean leftAdd, boolean rightAdd) {

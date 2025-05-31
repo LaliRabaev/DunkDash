@@ -16,19 +16,20 @@
         android:background="#DDDDDD"
         android:src="@null" />
 
-    <!-- This should be added if it doesn't already exist -->
+    <!-- Centered score display -->
     <TextView
         android:id="@+id/score_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_margin="16dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="100dp"
         android:background="#80000000"
-        android:padding="8dp"
+        android:padding="12dp"
         android:text="Score: 0"
         android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:textStyle="bold" />
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:elevation="8dp" />
 
     <!-- Top barrier with 7 cones -->
     <LinearLayout
