@@ -56,15 +56,7 @@ public class SelectBasketballsActivity extends AppCompatActivity {
         saveButton = findViewById(R.id.save_button);
         saveButton.setEnabled(false);
 
-        // Add return button logic
-        Button returnButton = findViewById(R.id.button_return_home);
-        returnButton.setOnClickListener(v -> {
-            Intent intent = new Intent(SelectBasketballsActivity.this, HomePageActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(intent);
-            finish();
-        });
-
+        // Fix: Use correct button ID from XML layout
         Button btnReturn = findViewById(R.id.btn_return);
         btnReturn.setOnClickListener(v -> finish());
 
@@ -72,6 +64,7 @@ public class SelectBasketballsActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         FirebaseUser user = auth.getCurrentUser();
         if (user == null) {
+            Log.e(TAG, "User not authenticated");
             Toast.makeText(this, "Please sign in first", Toast.LENGTH_SHORT).show();
             finish();
             return;
