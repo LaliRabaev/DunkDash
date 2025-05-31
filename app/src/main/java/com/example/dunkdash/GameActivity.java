@@ -58,6 +58,8 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     private long startTime;
     private int score = 0; // Use single score variable
     private boolean gameActive = true;
+    // Add bounce detection to prevent multiple scoring
+    private boolean justBouncedLeft = false, justBouncedRight = false;
 
     // Firestore
     private FirebaseFirestore db;
@@ -93,14 +95,12 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         // load dynamic selections
         loadUserSelections();
 
-        // tap-to-jump listener - temporarily add score increment for testing
+        // tap-to-jump listener - NO scoring on tap, only jump
         findViewById(R.id.rootLayout).setOnClickListener(v -> {
             if (gameActive) {
                 dy = JUMP_VELOCITY;
-                // Temporary: add score on tap to test display
-                score++;
-                updateScoreDisplay();
-                Log.d("GameActivity", "Tap! Score now: " + score);
+                // NO score increment here - only on side bounces
+                Log.d("GameActivity", "Tap! Jump only, score stays: " + score);
             }
         });
 
@@ -231,6 +231,10 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         playerY = (screenHeight - player.getHeight()) / 2f;
         dx = 8f; // Reset horizontal velocity
         dy = 0f; // Reset vertical velocity
+        
+        // Reset bounce flags
+        justBouncedLeft = false;
+        justBouncedRight = false;
         
         player.setX(playerX);
         player.setY(playerY);
@@ -386,17 +390,33 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         int w  = player.getRootView().getWidth();
         int h  = player.getRootView().getHeight();
 
-        // Track side bounces for scoring with debugging
+        // Track side bounces for scoring with bounce detection
         if (playerX <= 0) {
             dx = Math.abs(dx);
-            Log.d("GameActivity", "Left side bounce! Score: " + score);
-            incrementScore(); // Score when bouncing off left side
+            // Only score if we haven't just bounced left
+            if (!justBouncedLeft) {
+                Log.d("GameActivity", "Left side bounce! Score: " + score);
+                incrementScore();
+                justBouncedLeft = true;
+                justBouncedRight = false; // Reset right bounce flag
+            }
             swapSide(false, true);
         } else if (playerX + pw >= w) {
             dx = -Math.abs(dx);
-            Log.d("GameActivity", "Right side bounce! Score: " + score);
-            incrementScore(); // Score when bouncing off right side
+            // Only score if we haven't just bounced right
+            if (!justBouncedRight) {
+                Log.d("GameActivity", "Right side bounce! Score: " + score);
+                incrementScore();
+                justBouncedRight = true;
+                justBouncedLeft = false; // Reset left bounce flag
+            }
             swapSide(true, false);
+        } else {
+            // Reset bounce flags when not touching sides
+            if (playerX > 10 && playerX + pw < w - 10) {
+                justBouncedLeft = false;
+                justBouncedRight = false;
+            }
         }
 
         if (playerY < 0) {
