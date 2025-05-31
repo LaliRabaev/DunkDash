@@ -127,8 +127,7 @@ public class SelectModesActivity extends AppCompatActivity {
 
     private void createModeCard(QueryDocumentSnapshot doc) {
         int id = doc.getLong("id").intValue();
-        String name = doc.getString("name");
-        String description = doc.getString("description");
+        Long speed = doc.getLong("speed"); // Get speed value
         long minScore = getMinScore(doc);
         boolean unlocked = userMaxScore >= minScore;
 
@@ -181,13 +180,13 @@ public class SelectModesActivity extends AppCompatActivity {
         nameText.setTextSize(22);
         nameText.setTypeface(null, android.graphics.Typeface.BOLD);
 
-        // Mode description
+        // Mode description with speed info
         TextView descriptionText = new TextView(this);
-        if (description != null && !description.trim().isEmpty()) {
-            descriptionText.setText(description);
-        } else {
-            descriptionText.setText(getDefaultDescription(name));
+        String description = getDefaultDescription(name);
+        if (speed != null) {
+            description += " • Speed: " + speed;
         }
+        descriptionText.setText(description);
         descriptionText.setTextColor(0xFFCCCCCC);
         descriptionText.setTextSize(14);
         descriptionText.setPadding(0, dpToPx(4), 0, dpToPx(8));
@@ -237,6 +236,9 @@ public class SelectModesActivity extends AppCompatActivity {
         }
 
         modesContainer.addView(card);
+        
+        // Debug logging
+        Log.d(TAG, "Created mode card: " + name + " (ID: " + id + ", Speed: " + speed + ", MinScore: " + minScore + ", Unlocked: " + unlocked + ")");
     }
 
     private void setModeCardBackground(LinearLayout card, String modeName, boolean unlocked) {
