@@ -77,10 +77,13 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     private static final long DIFFICULTY_INTERVAL_MS = 10000; // Increase difficulty every 10 seconds
     private static final int MAX_DIFFICULTY = 10;
 
-    // Add invincibility tracking
-    private boolean isInvincible = false;
-    private long invincibilityStartTime = 0;
-    private static final long INVINCIBILITY_DURATION_MS = 2000; // 2 seconds of invincibility
+    // Add countdown tracking
+    private FrameLayout countdownOverlay;
+    private TextView countdownText;
+    private boolean isCountingDown = false;
+    private int countdownValue = 3;
+    private Handler countdownHandler = new Handler();
+    private Runnable countdownRunnable;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -98,6 +101,10 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         topBarrierContainer  = findViewById(R.id.top_barrier_container);
         bottomBarrierContainer = findViewById(R.id.bottom_barrier_container);
 
+        // bind countdown overlay
+        countdownOverlay = findViewById(R.id.countdown_overlay);
+        countdownText = findViewById(R.id.countdown_text);
+
         // Firebase
         db = FirebaseFirestore.getInstance();
         FirebaseUser u = FirebaseAuth.getInstance().getCurrentUser();
@@ -106,9 +113,9 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         // load dynamic selections
         loadUserSelections();
 
-        // tap-to-jump listener - NO scoring on tap, only jump
+        // tap-to-jump listener - only work when game is active and not counting down
         findViewById(R.id.rootLayout).setOnClickListener(v -> {
-            if (gameActive) {
+            if (gameActive && !isCountingDown) {
                 dy = JUMP_VELOCITY;
                 // NO score increment here - only on side bounces
                 Log.d("GameActivity", "Tap! Jump only, score stays: " + score);
@@ -150,15 +157,47 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus && !prepared) {
             startTime = System.currentTimeMillis();
-            // Start invincibility when game begins
-            startInvincibility();
             addCones("left");
             addCones("right");
             prepared = true;
             playerX = player.getX();
             playerY = player.getY();
-            startGameLoop();
+
+            // Start countdown instead of immediately starting game
+            startCountdown(() -> startGameLoop());
         }
+    }
+
+    private void startCountdown(Runnable onComplete) {
+        isCountingDown = true;
+        countdownValue = 3;
+        countdownOverlay.setVisibility(View.VISIBLE);
+        countdownText.setText(String.valueOf(countdownValue));
+
+        Log.d("GameActivity", "Starting countdown...");
+
+        countdownRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (countdownValue > 1) {
+                    countdownValue--;
+                    countdownText.setText(String.valueOf(countdownValue));
+                    countdownHandler.postDelayed(this, 1000);
+                } else if (countdownValue == 1) {
+                    countdownText.setText("GO!");
+                    countdownValue--;
+                    countdownHandler.postDelayed(this, 1000);
+                } else {
+                    // Countdown finished
+                    isCountingDown = false;
+                    countdownOverlay.setVisibility(View.GONE);
+                    Log.d("GameActivity", "Countdown finished, starting game");
+                    onComplete.run();
+                }
+            }
+        };
+
+        countdownHandler.postDelayed(countdownRunnable, 1000);
     }
 
     private void startGameLoop() {
@@ -209,8 +248,10 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
                     resetPlayerPosition();
                     // Clear current obstacles and regenerate
                     resetObstacles();
-                    // Restart the game loop
-                    startGameLoop();
+
+                    // Start countdown before continuing game
+                    startCountdown(() -> startGameLoop());
+
                     Toast.makeText(GameActivity.this,
                             "Continue with score: " + score,
                             Toast.LENGTH_SHORT).show();
@@ -235,39 +276,20 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         });
     }
 
-    private void startInvincibility() {
-        isInvincible = true;
-        invincibilityStartTime = System.currentTimeMillis();
-        Log.d("GameActivity", "Invincibility started for " + INVINCIBILITY_DURATION_MS + "ms");
-    }
-
-    private void updateInvincibility() {
-        if (isInvincible) {
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - invincibilityStartTime >= INVINCIBILITY_DURATION_MS) {
-                isInvincible = false;
-                Log.d("GameActivity", "Invincibility ended");
-            }
-        }
-    }
-
     private void resetPlayerPosition() {
         // Reset player to center of screen
         int screenWidth = findViewById(R.id.rootLayout).getWidth();
         int screenHeight = findViewById(R.id.rootLayout).getHeight();
-        
+
         playerX = (screenWidth - player.getWidth()) / 2f;
         playerY = (screenHeight - player.getHeight()) / 2f;
         dx = 8f; // Reset horizontal velocity
         dy = 0f; // Reset vertical velocity
-        
+
         // Reset bounce flags
         justBouncedLeft = false;
         justBouncedRight = false;
-        
-        // Start invincibility when continuing from ad
-        startInvincibility();
-        
+
         player.setX(playerX);
         player.setY(playerY);
     }
@@ -277,15 +299,15 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         removeCones(leftContainer);
         removeCones(rightContainer);
         sideCones.clear();
-        
+
         // Reset side states
         leftActive = true;
         rightActive = true;
-        
+
         // Reset difficulty when restarting
         difficultyLevel = 1;
         lastDifficultyUpdate = 0;
-        
+
         // Add new obstacles
         addCones("left");
         addCones("right");
@@ -347,12 +369,13 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     protected void onPause() {
         super.onPause();
         handler.removeCallbacks(gameLoop);
+        countdownHandler.removeCallbacks(countdownRunnable);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (gameLoop != null && gameActive) {
+        if (gameLoop != null && gameActive && !isCountingDown) {
             handler.postDelayed(gameLoop, FRAME_RATE_MS);
         }
 
@@ -418,12 +441,14 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     // ————————————————————————————————
 
     private void updateMovement() {
+        // Don't update movement during countdown
+        if (isCountingDown) {
+            return;
+        }
+
         // Update difficulty based on time
         updateDifficulty();
-        
-        // Update invincibility status
-        updateInvincibility();
-        
+
         playerX += dx;
         playerY += dy;
         dy += GRAVITY;
@@ -475,12 +500,12 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     private void updateDifficulty() {
         long currentTime = System.currentTimeMillis();
         long elapsedTime = currentTime - startTime;
-        
+
         // Check if it's time to increase difficulty
         if (elapsedTime - lastDifficultyUpdate >= DIFFICULTY_INTERVAL_MS && difficultyLevel < MAX_DIFFICULTY) {
             difficultyLevel++;
             lastDifficultyUpdate = elapsedTime;
-            
+
             // Regenerate obstacles with new difficulty
             if (leftActive) {
                 removeCones(leftContainer);
@@ -490,7 +515,7 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
                 removeCones(rightContainer);
                 addCones("right");
             }
-            
+
             Log.d("GameActivity", "Difficulty increased to level: " + difficultyLevel);
         }
     }
@@ -517,20 +542,20 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     private void addCones(String side) {
         FrameLayout container = side.equals("left") ? leftContainer : rightContainer;
         int height = container.getHeight();
-        
+
         // Difficulty-based cone count (1-2 at level 1, up to 6-8 at max difficulty)
         int minCones = Math.min(1 + (difficultyLevel - 1) / 2, 6);
         int maxCones = Math.min(2 + difficultyLevel / 2, 8);
         int count = minCones + new Random().nextInt(maxCones - minCones + 1);
-        
+
         int coneH = dpToPx(120);
-        
+
         // Reduce gap between cones as difficulty increases
         int baseGap = dpToPx(100);
         int difficultyReduction = (difficultyLevel - 1) * dpToPx(8);
         int minGap = dpToPx(20); // Minimum gap to maintain playability
         int gap = Math.max(minGap, baseGap - difficultyReduction);
-        
+
         // Calculate if we need to adjust cone spacing
         int totalConeSpace = count * coneH + (count + 1) * gap;
         if (totalConeSpace > height) {
@@ -544,11 +569,11 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
             cone.setImageResource(R.drawable.game_cone);
             cone.setRotation(side.equals("left") ? 90 : -90);
             cone.setScaleType(ImageView.ScaleType.FIT_XY);
-            
+
             FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(dpToPx(80), coneH);
             p.gravity = side.equals("left") ? Gravity.START : Gravity.END;
             p.topMargin = positions.get(i);
-            
+
             if (side.equals("right")) p.setMarginEnd(dpToPx(8));
             container.addView(cone, p);
             sideCones.add(cone);
@@ -558,115 +583,100 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     private List<Integer> generateConePositions(int containerHeight, int coneCount, int coneHeight, int gap) {
         List<Integer> positions = new ArrayList<>();
         Random random = new Random();
-        
-        // Create safe zone in the center (where player starts)
-        int safeZoneStart = (containerHeight / 2) - dpToPx(150); // 150dp above center
-        int safeZoneEnd = (containerHeight / 2) + dpToPx(150);   // 150dp below center
-        
+
         if (difficultyLevel <= 3) {
-            // Early levels: Simple evenly spaced cones with safe zone
-            int currentY = gap;
+            // Early levels: Simple evenly spaced cones
             for (int i = 0; i < coneCount; i++) {
-                // Skip positions that would be in the safe zone
-                while (currentY + coneHeight > safeZoneStart && currentY < safeZoneEnd) {
-                    currentY = safeZoneEnd + gap;
-                }
-                
-                if (currentY + coneHeight <= containerHeight - gap) {
-                    positions.add(currentY);
-                    currentY += coneHeight + gap;
-                } else {
-                    // Place in top area if bottom is full
-                    int topY = gap + positions.size() * (coneHeight + gap);
-                    if (topY + coneHeight < safeZoneStart) {
-                        positions.add(topY);
-                    }
-                }
+                positions.add(gap * (i + 1) + coneHeight * i);
             }
         } else if (difficultyLevel <= 6) {
-            // Mid levels: Some clustering but still respect safe zone
-            int attempts = 0;
-            while (positions.size() < coneCount && attempts < 50) {
-                int y = gap + random.nextInt(Math.max(1, containerHeight - coneHeight - gap * 2));
-                
-                // Check if position is in safe zone
-                if (y + coneHeight > safeZoneStart && y < safeZoneEnd) {
-                    attempts++;
-                    continue;
-                }
-                
-                // Check if position conflicts with existing cones
-                boolean validPosition = true;
-                for (int existingY : positions) {
-                    if (Math.abs(y - existingY) < coneHeight + gap / 2) {
-                        validPosition = false;
-                        break;
+            // Mid levels: Some clustering and irregular spacing
+            int usableHeight = containerHeight - coneCount * coneHeight - gap * 2; // Top and bottom margins
+            int currentY = gap;
+
+            for (int i = 0; i < coneCount; i++) {
+                if (i == 0) {
+                    positions.add(currentY);
+                } else {
+                    // Add some randomness to spacing
+                    int minSpacing = gap / 2;
+                    int maxSpacing = gap * 2;
+                    int spacing = minSpacing + random.nextInt(maxSpacing - minSpacing + 1);
+                    currentY += coneHeight + spacing;
+
+                    // Ensure we don't exceed container bounds
+                    if (currentY + coneHeight > containerHeight - gap) {
+                        currentY = containerHeight - gap - coneHeight;
                     }
+                    positions.add(currentY);
                 }
-                
-                if (validPosition) {
-                    positions.add(y);
-                }
-                attempts++;
             }
         } else {
-            // High levels: Create challenging patterns but keep center safe initially
-            // Only apply safe zone for the first few seconds of high difficulty
-            boolean applySafeZone = isInvincible || (System.currentTimeMillis() - startTime < 5000);
-            
+            // High levels: Create challenging patterns
+            int usableHeight = containerHeight - coneCount * coneHeight - gap * 2;
+
             if (difficultyLevel % 2 == 0) {
                 // Even difficulty: Cluster cones at top and bottom
                 int conesPerCluster = coneCount / 2;
                 int remainingCones = coneCount % 2;
-                
+
                 // Top cluster
                 for (int i = 0; i < conesPerCluster; i++) {
-                    int y = gap + i * (coneHeight + gap / 3);
-                    if (!applySafeZone || y + coneHeight < safeZoneStart) {
+                    positions.add(gap + i * (coneHeight + gap / 3));
+                }
+
+                // Bottom cluster
+                int bottomStart = containerHeight - gap - (conesPerCluster + remainingCones) * coneHeight - (conesPerCluster + remainingCones - 1) * gap / 3;
+                for (int i = 0; i < conesPerCluster + remainingCones; i++) {
+                    positions.add(bottomStart + i * (coneHeight + gap / 3));
+                }
+            } else {
+                // Odd difficulty: Create a narrow passage in the middle
+                int passageStart = containerHeight / 3;
+                int passageEnd = 2 * containerHeight / 3;
+
+                // Fill top area
+                int topCones = coneCount / 2;
+                for (int i = 0; i < topCones; i++) {
+                    int y = gap + i * (coneHeight + gap / 4);
+                    if (y + coneHeight < passageStart) {
                         positions.add(y);
                     }
                 }
-                
-                // Bottom cluster
-                int bottomStart = applySafeZone ? 
-                    Math.max(safeZoneEnd + gap, containerHeight - (conesPerCluster + remainingCones) * coneHeight - gap) :
-                    containerHeight - gap - (conesPerCluster + remainingCones) * coneHeight;
-                
-                for (int i = 0; i < conesPerCluster + remainingCones; i++) {
-                    int y = bottomStart + i * (coneHeight + gap / 3);
+
+                // Fill bottom area
+                int bottomCones = coneCount - topCones;
+                for (int i = 0; i < bottomCones; i++) {
+                    int y = passageEnd + gap + i * (coneHeight + gap / 4);
                     if (y + coneHeight < containerHeight - gap) {
                         positions.add(y);
                     }
                 }
-            } else {
-                // Odd difficulty: Create patterns avoiding safe zone if needed
-                int attempts = 0;
-                while (positions.size() < coneCount && attempts < 50) {
-                    int y = gap + random.nextInt(Math.max(1, containerHeight - coneHeight - gap * 2));
-                    
-                    // Check safe zone only if invincible or just started
-                    if (applySafeZone && y + coneHeight > safeZoneStart && y < safeZoneEnd) {
-                        attempts++;
-                        continue;
-                    }
-                    
-                    // Check if position conflicts with existing cones
+
+                // Add any remaining cones randomly in safe areas
+                while (positions.size() < coneCount) {
+                    int y = random.nextInt(containerHeight - coneHeight - gap * 2) + gap;
                     boolean validPosition = true;
+
+                    // Check if position conflicts with passage or existing cones
+                    if (y + coneHeight > passageStart && y < passageEnd) {
+                        validPosition = false;
+                    }
+
                     for (int existingY : positions) {
                         if (Math.abs(y - existingY) < coneHeight + gap / 2) {
                             validPosition = false;
                             break;
                         }
                     }
-                    
+
                     if (validPosition) {
                         positions.add(y);
                     }
-                    attempts++;
                 }
             }
         }
-        
+
         return positions;
     }
 
@@ -676,11 +686,11 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     }
 
     private boolean detectCollision() {
-        // Skip collision detection during invincibility
-        if (isInvincible) {
+        // Skip collision detection during countdown
+        if (isCountingDown) {
             return false;
         }
-        
+
         for (ImageView cone : sideCones) {
             if (pixelCollision(player, cone)) return true;
         }

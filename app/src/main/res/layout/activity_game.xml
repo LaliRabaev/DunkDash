@@ -184,4 +184,29 @@
         android:background="@android:color/transparent"
         android:src="@null" />
 
+    <!-- Countdown overlay -->
+    <FrameLayout
+        android:id="@+id/countdown_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC000000"
+        android:visibility="gone"
+        android:elevation="10dp">
+
+        <TextView
+            android:id="@+id/countdown_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="3"
+            android:textColor="#FFFFFF"
+            android:textSize="120sp"
+            android:textStyle="bold"
+            android:shadowColor="#000000"
+            android:shadowDx="4"
+            android:shadowDy="4"
+            android:shadowRadius="8" />
+
+    </FrameLayout>
+
 </RelativeLayout>
