@@ -133,7 +133,6 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus && !prepared) {
             startTime = System.currentTimeMillis();
-            score = 0;
             addCones("left");
             addCones("right");
             prepared = true;
