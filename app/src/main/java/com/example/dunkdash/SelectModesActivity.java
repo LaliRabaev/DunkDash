@@ -399,6 +399,32 @@ public class SelectModesActivity extends AppCompatActivity {
         }
     }
 
+    private String getModeEmoji(String modeName) {
+        switch (modeName.toLowerCase()) {
+            case "easy":
+                return "😊";
+            case "medium":
+                return "😐";
+            case "hard":
+                return "💀";
+            default:
+                return "🎮";
+        }
+    }
+
+    private String getDefaultDescription(String modeName) {
+        switch (modeName.toLowerCase()) {
+            case "easy":
+                return "Perfect for beginners • Relaxed gameplay";
+            case "medium":
+                return "Balanced challenge • Good for improving";
+            case "hard":
+                return "Ultimate challenge • For skilled players only";
+            default:
+                return "A challenging game mode";
+        }
+    }
+
     private void selectMode(int id, String name, View cardView, View indicator) {
         // Clear previous selection
         if (currentlySelectedView != null) {
