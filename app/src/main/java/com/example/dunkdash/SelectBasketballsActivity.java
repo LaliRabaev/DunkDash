@@ -101,13 +101,14 @@ public class SelectBasketballsActivity extends AppCompatActivity {
                             for (QueryDocumentSnapshot doc : task.getResult()) {
                                 docs.add(doc);
                             }
-                            Collections.sort(docs, Comparator.comparingLong(d -> d.contains("min_score") ? d.getLong("min_score") : Long.MAX_VALUE));
+                            // Fix: Safe sorting with proper min_score handling
+                            Collections.sort(docs, Comparator.comparingLong(d -> getMinScore(d)));
 
                             for (QueryDocumentSnapshot doc : docs) {
                                 int id = doc.getLong("id").intValue();
                                 String name = doc.getString("name");
                                 String path = doc.getString("image_path");
-                                long minScore = doc.contains("min_score") ? doc.getLong("min_score") : Long.MAX_VALUE;
+                                long minScore = getMinScore(doc);
                                 boolean unlocked = userMaxScore >= minScore;
 
                                 String resName = path.replaceFirst("^drawable/", "");
@@ -161,6 +162,25 @@ public class SelectBasketballsActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> Toast.makeText(SelectBasketballsActivity.this,
                         "Error fetching balls: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private long getMinScore(QueryDocumentSnapshot doc) {
+        if (!doc.contains("min_score")) {
+            return 0; // Default to 0 if field doesn't exist
+        }
+        
+        Object minScoreObj = doc.get("min_score");
+        if (minScoreObj instanceof Number) {
+            return ((Number) minScoreObj).longValue();
+        } else if (minScoreObj instanceof String) {
+            try {
+                return Long.parseLong((String) minScoreObj);
+            } catch (NumberFormatException e) {
+                Log.w(TAG, "Invalid min_score string: " + minScoreObj);
+                return 0;
+            }
+        }
+        return 0; // Default fallback
     }
 
     private void highlightSelection(View selected) {
