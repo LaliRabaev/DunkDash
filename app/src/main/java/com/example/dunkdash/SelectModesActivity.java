@@ -105,54 +105,147 @@ public class SelectModesActivity extends AppCompatActivity {
         
         Log.d(TAG, "Starting to load game modes from Firestore...");
         
-        db.collection("game-mode").get()
+        db.collection("game_mode").get()
                 .addOnSuccessListener(querySnapshot -> {
                     Log.d(TAG, "Firestore query successful. Documents found: " + querySnapshot.size());
                     
                     if (querySnapshot.isEmpty()) {
-                        Log.w(TAG, "No game modes found in 'game-mode' collection");
-                        
-                        // Try alternative collection name
-                        Log.d(TAG, "Trying alternative collection name 'game_modes'...");
-                        db.collection("game_modes").get()
-                                .addOnSuccessListener(altQuerySnapshot -> {
-                                    Log.d(TAG, "Alternative query found: " + altQuerySnapshot.size() + " documents");
-                                    if (altQuerySnapshot.isEmpty()) {
-                                        showError("No game modes available");
-                                    } else {
-                                        processGameModes(altQuerySnapshot);
-                                    }
-                                })
-                                .addOnFailureListener(e -> {
-                                    Log.e(TAG, "Alternative query also failed", e);
-                                    showError("Failed to load game modes");
-                                });
-                        return;
+                        Log.w(TAG, "No game modes found in 'game_mode' collection, loading defaults");
+                        loadDefaultModes();
+                    } else {
+                        processGameModes(querySnapshot);
                     }
-                    
-                    processGameModes(querySnapshot);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load modes from 'game-mode' collection", e);
-                    
-                    // Try alternative collection name
-                    Log.d(TAG, "Trying alternative collection name 'game_modes'...");
-                    db.collection("game_modes").get()
-                            .addOnSuccessListener(altQuerySnapshot -> {
-                                Log.d(TAG, "Alternative query successful: " + altQuerySnapshot.size() + " documents");
-                                if (altQuerySnapshot.isEmpty()) {
-                                    showError("No game modes available");
-                                } else {
-                                    processGameModes(altQuerySnapshot);
-                                }
-                            })
-                            .addOnFailureListener(e2 -> {
-                                Log.e(TAG, "Both collection queries failed", e2);
-                                showError("Failed to load game modes");
-                            });
+                    Log.e(TAG, "Failed to load modes from 'game_mode' collection", e);
+                    Log.d(TAG, "Loading default game modes as fallback");
+                    loadDefaultModes();
                 });
     }
     
+    private void loadDefaultModes() {
+        Log.d(TAG, "Creating default game modes");
+        
+        // Create default game modes
+        createDefaultModeCard(1, "Easy", "😊", "Perfect for beginners • Relaxed gameplay", 0, 5);
+        createDefaultModeCard(2, "Medium", "😐", "Balanced challenge • Good for improving", 100, 10);
+        createDefaultModeCard(3, "Hard", "💀", "Ultimate challenge • For skilled players only", 500, 15);
+        
+        showLoading(false);
+        Log.d(TAG, "Finished creating default game modes");
+    }
+    
+    private void createDefaultModeCard(int id, String name, String emoji, String description, long minScore, int speed) {
+        boolean unlocked = userMaxScore >= minScore;
+        
+        Log.d(TAG, "Creating default mode: " + name + " (ID: " + id + ", Speed: " + speed + ", MinScore: " + minScore + ", Unlocked: " + unlocked + ")");
+
+        // Create card container
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(20));
+        
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        cardParams.setMargins(0, 0, 0, dpToPx(12));
+        card.setLayoutParams(cardParams);
+
+        // Set special background based on mode type and unlock status
+        setModeCardBackground(card, name, unlocked);
+
+        // Header container (emoji + name + selection indicator)
+        LinearLayout headerContainer = new LinearLayout(this);
+        headerContainer.setOrientation(LinearLayout.HORIZONTAL);
+        headerContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        // Mode emoji
+        TextView modeEmoji = new TextView(this);
+        modeEmoji.setText(emoji);
+        modeEmoji.setTextSize(32);
+        LinearLayout.LayoutParams emojiParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        emojiParams.setMargins(0, 0, dpToPx(16), 0);
+        modeEmoji.setLayoutParams(emojiParams);
+
+        // Info container (name + description + status)
+        LinearLayout infoContainer = new LinearLayout(this);
+        infoContainer.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams infoParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+        );
+        infoContainer.setLayoutParams(infoParams);
+
+        // Mode name
+        TextView nameText = new TextView(this);
+        nameText.setText(name);
+        nameText.setTextColor(Color.WHITE);
+        nameText.setTextSize(22);
+        nameText.setTypeface(null, android.graphics.Typeface.BOLD);
+
+        // Mode description with speed info
+        TextView descriptionText = new TextView(this);
+        String fullDescription = description + " • Speed: " + speed;
+        descriptionText.setText(fullDescription);
+        descriptionText.setTextColor(0xFFCCCCCC);
+        descriptionText.setTextSize(14);
+        descriptionText.setPadding(0, dpToPx(4), 0, dpToPx(8));
+
+        // Status text
+        TextView statusText = new TextView(this);
+        if (unlocked) {
+            statusText.setText("✅ Unlocked");
+            statusText.setTextColor(0xFF4CAF50); // Green
+        } else {
+            statusText.setText("🔒 Requires " + minScore + " points");
+            statusText.setTextColor(0xFFFFB74D); // Orange
+        }
+        statusText.setTextSize(14);
+        statusText.setTypeface(null, android.graphics.Typeface.BOLD);
+
+        infoContainer.addView(nameText);
+        infoContainer.addView(descriptionText);
+        infoContainer.addView(statusText);
+
+        // Selection indicator
+        TextView selectionIndicator = new TextView(this);
+        selectionIndicator.setText("⭐");
+        selectionIndicator.setTextSize(28);
+        selectionIndicator.setVisibility(View.GONE);
+        LinearLayout.LayoutParams indicatorParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        indicatorParams.setMargins(dpToPx(8), 0, 0, 0);
+        selectionIndicator.setLayoutParams(indicatorParams);
+
+        // Add views to header
+        headerContainer.addView(modeEmoji);
+        headerContainer.addView(infoContainer);
+        headerContainer.addView(selectionIndicator);
+
+        // Add header to card
+        card.addView(headerContainer);
+
+        // Set click listener
+        if (unlocked) {
+            card.setOnClickListener(v -> selectMode(id, name, card, selectionIndicator));
+        } else {
+            card.setOnClickListener(v -> {
+                Toast.makeText(this, "🔒 Unlock by reaching " + minScore + " points!", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        modesContainer.addView(card);
+        
+        Log.d(TAG, "Created default mode card: " + name);
+    }
+
     private void processGameModes(com.google.firebase.firestore.QuerySnapshot querySnapshot) {
         List<com.google.firebase.firestore.QueryDocumentSnapshot> docs = new ArrayList<>();
         
