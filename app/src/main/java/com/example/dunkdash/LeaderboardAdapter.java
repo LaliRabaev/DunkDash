@@ -1,5 +1,6 @@
 package com.example.dunkdash;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,16 +13,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.ViewHolder> {
+    private static final String TAG = "LeaderboardAdapter";
     private List<LeaderboardPlayer> players = new ArrayList<>();
     private String currentUserId;
 
     public void updatePlayers(List<LeaderboardPlayer> newPlayers) {
         this.players = new ArrayList<>(newPlayers);
+        Log.d(TAG, "Updated players list with " + players.size() + " players, current user ID: " + currentUserId);
         notifyDataSetChanged();
     }
 
     public void setCurrentUserId(String userId) {
         this.currentUserId = userId;
+        Log.d(TAG, "Set current user ID to: " + userId);
     }
 
     @NonNull
@@ -77,14 +81,20 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
             nicknameText.setText(player.getNickname());
             
             // Debug logging to check user ID matching
-            android.util.Log.d("LeaderboardAdapter", "Player: " + player.getNickname() + 
-                              ", PlayerID: " + player.getUserId() + 
-                              ", CurrentUserID: " + currentUserId + 
-                              ", Match: " + (currentUserId != null && currentUserId.equals(player.getUserId())));
+            Log.d("LeaderboardAdapter", "Binding player: " + player.getNickname() + 
+                              " | PlayerID: '" + player.getUserId() + "'" +
+                              " | CurrentUserID: '" + currentUserId + "'" +
+                              " | IDs Equal: " + (currentUserId != null && currentUserId.equals(player.getUserId())) +
+                              " | Player ID null: " + (player.getUserId() == null) +
+                              " | Current ID null: " + (currentUserId == null));
             
-            if (currentUserId != null && currentUserId.equals(player.getUserId())) {
+            boolean isCurrentUser = currentUserId != null && 
+                                  player.getUserId() != null && 
+                                  currentUserId.trim().equals(player.getUserId().trim());
+            
+            if (isCurrentUser) {
                 youIndicator.setVisibility(View.VISIBLE);
-                android.util.Log.d("LeaderboardAdapter", "Showing (You) indicator for: " + player.getNickname());
+                Log.d("LeaderboardAdapter", "✓ Showing (You) indicator for: " + player.getNickname());
             } else {
                 youIndicator.setVisibility(View.GONE);
             }
@@ -97,7 +107,9 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
         }
 
         private void setBackgroundAndColors(LeaderboardPlayer player, String currentUserId) {
-            boolean isCurrentUser = currentUserId != null && currentUserId.equals(player.getUserId());
+            boolean isCurrentUser = currentUserId != null && 
+                                  player.getUserId() != null && 
+                                  currentUserId.trim().equals(player.getUserId().trim());
             
             if (isCurrentUser) {
                 // Current user gets special green background

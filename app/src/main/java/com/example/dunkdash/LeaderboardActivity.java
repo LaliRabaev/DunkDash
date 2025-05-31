@@ -22,7 +22,7 @@ import java.util.List;
 
 public class LeaderboardActivity extends AppCompatActivity {
     private static final String TAG = "LeaderboardActivity";
-    private static final int TOP_PLAYERS_LIMIT = 50;
+    private static final int TOP_PLAYERS_LIMIT = 100; // Increased from 50 to 100
 
     private RecyclerView leaderboardRecyclerView;
     private LeaderboardAdapter adapter;
@@ -85,7 +85,8 @@ public class LeaderboardActivity extends AppCompatActivity {
             return;
         }
 
-        Log.d(TAG, "Loading leaderboard for user: " + currentUser.getUid());
+        String currentUserId = currentUser.getUid();
+        Log.d(TAG, "Loading leaderboard for current user ID: " + currentUserId);
         showLoading(true);
 
         db.collection("users")
@@ -96,6 +97,7 @@ public class LeaderboardActivity extends AppCompatActivity {
                     Log.d(TAG, "Leaderboard query successful, got " + querySnapshot.size() + " documents");
                     List<LeaderboardPlayer> players = new ArrayList<>();
                     int rank = 1;
+                    boolean foundCurrentUser = false;
 
                     for (QueryDocumentSnapshot doc : querySnapshot) {
                         Long maxScore = doc.getLong("max_score");
@@ -112,17 +114,30 @@ public class LeaderboardActivity extends AppCompatActivity {
                             nickname = "Anonymous Player";
                         }
 
+                        String userId = doc.getId();
+                        Log.d(TAG, "Processing player: " + nickname + " with ID: " + userId + " (current: " + currentUserId + ")");
+                        
+                        if (userId.equals(currentUserId)) {
+                            foundCurrentUser = true;
+                            Log.d(TAG, "Found current user in leaderboard at rank " + rank);
+                        }
+
                         LeaderboardPlayer player = new LeaderboardPlayer(
                                 rank,
                                 nickname,
                                 maxScore,
                                 totalGames != null ? totalGames : 0L,
-                                doc.getId() // Add user ID
+                                userId
                         );
                         players.add(player);
                         rank++;
                     }
 
+                    Log.d(TAG, "Current user found in leaderboard: " + foundCurrentUser);
+                    
+                    // Update adapter with current user ID again to ensure it's set
+                    adapter.setCurrentUserId(currentUserId);
+                    
                     showLoading(false);
                     if (players.isEmpty()) {
                         showEmptyState(true);
