@@ -39,7 +39,11 @@
         <activity android:name=".FailActivity" />
         <activity android:name=".SelectBackgroundsActivity" />
         <activity android:name=".SelectBasketballsActivity"/>
-        <activity android:name=".SelectModes" />
+        <activity android:name=".SelectModesActivity" />
+        <activity
+            android:name=".LeaderboardActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -69,6 +69,11 @@ public class HomePageActivity extends AppCompatActivity {
         findViewById(R.id.skull_icon).setOnClickListener(v ->
                 startActivity(new Intent(this, SelectModesActivity.class))
         );
+        
+        // Add leaderboard button click handler
+        findViewById(R.id.leaderboard_icon).setOnClickListener(v ->
+                startActivity(new Intent(this, LeaderboardActivity.class))
+        );
     }
 
     @Override

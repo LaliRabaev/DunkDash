@@ -6,7 +6,7 @@
     android:background="@drawable/leaderboard_background"
     android:padding="16dp">
 
-    <!-- Header -->
+    <!-- Header with back button and title -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -14,9 +14,9 @@
 
         <ImageButton
             android:id="@+id/back_button"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentLeft="true"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:background="@drawable/circle_button_background"
             android:src="@drawable/ic_arrow_back"
@@ -26,48 +26,41 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:text="🏆 LEADERBOARD 🏆"
+            android:text="🏆 Leaderboard"
+            android:textColor="#FFFFFF"
             android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="@color/gold"
-            android:shadowColor="@color/black"
-            android:shadowDx="2"
-            android:shadowDy="2"
-            android:shadowRadius="4" />
+            android:textStyle="bold" />
 
     </RelativeLayout>
 
-    <!-- Leaderboard Content -->
-    <FrameLayout
+    <!-- Loading indicator -->
+    <ProgressBar
+        android:id="@+id/loading_progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="100dp"
+        android:visibility="gone" />
+
+    <!-- Empty state message -->
+    <TextView
+        android:id="@+id/empty_state_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="100dp"
+        android:text="No players found"
+        android:textColor="#CCCCCC"
+        android:textSize="18sp"
+        android:visibility="gone" />
+
+    <!-- Leaderboard list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/leaderboard_recycler_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/leaderboard_recycler_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingBottom="16dp" />
-
-        <ProgressBar
-            android:id="@+id/loading_progress"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/empty_state_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="No scores yet!\nBe the first to play!"
-            android:textSize="18sp"
-            android:textColor="@color/white"
-            android:textAlignment="center"
-            android:visibility="gone" />
-
-    </FrameLayout>
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp" />
 
 </LinearLayout>
