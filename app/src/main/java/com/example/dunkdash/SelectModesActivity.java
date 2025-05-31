@@ -103,34 +103,98 @@ public class SelectModesActivity extends AppCompatActivity {
     private void loadModes() {
         modesContainer.removeAllViews();
         
+        Log.d(TAG, "Starting to load game modes from Firestore...");
+        
         db.collection("game-mode").get()
                 .addOnSuccessListener(querySnapshot -> {
-                    List<QueryDocumentSnapshot> docs = new ArrayList<>();
-                    for (QueryDocumentSnapshot doc : querySnapshot) {
-                        docs.add(doc);
+                    Log.d(TAG, "Firestore query successful. Documents found: " + querySnapshot.size());
+                    
+                    if (querySnapshot.isEmpty()) {
+                        Log.w(TAG, "No game modes found in 'game-mode' collection");
+                        
+                        // Try alternative collection name
+                        Log.d(TAG, "Trying alternative collection name 'game_modes'...");
+                        db.collection("game_modes").get()
+                                .addOnSuccessListener(altQuerySnapshot -> {
+                                    Log.d(TAG, "Alternative query found: " + altQuerySnapshot.size() + " documents");
+                                    if (altQuerySnapshot.isEmpty()) {
+                                        showError("No game modes available");
+                                    } else {
+                                        processGameModes(altQuerySnapshot);
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Alternative query also failed", e);
+                                    showError("Failed to load game modes");
+                                });
+                        return;
                     }
                     
-                    // Sort by min_score
-                    Collections.sort(docs, Comparator.comparingLong(this::getMinScore));
-                    
-                    for (QueryDocumentSnapshot doc : docs) {
-                        createModeCard(doc);
-                    }
-                    
-                    showLoading(false);
+                    processGameModes(querySnapshot);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load modes", e);
-                    showError("Failed to load game modes");
+                    Log.e(TAG, "Failed to load modes from 'game-mode' collection", e);
+                    
+                    // Try alternative collection name
+                    Log.d(TAG, "Trying alternative collection name 'game_modes'...");
+                    db.collection("game_modes").get()
+                            .addOnSuccessListener(altQuerySnapshot -> {
+                                Log.d(TAG, "Alternative query successful: " + altQuerySnapshot.size() + " documents");
+                                if (altQuerySnapshot.isEmpty()) {
+                                    showError("No game modes available");
+                                } else {
+                                    processGameModes(altQuerySnapshot);
+                                }
+                            })
+                            .addOnFailureListener(e2 -> {
+                                Log.e(TAG, "Both collection queries failed", e2);
+                                showError("Failed to load game modes");
+                            });
                 });
+    }
+    
+    private void processGameModes(com.google.firebase.firestore.QuerySnapshot querySnapshot) {
+        List<com.google.firebase.firestore.QueryDocumentSnapshot> docs = new ArrayList<>();
+        
+        Log.d(TAG, "Processing " + querySnapshot.size() + " game mode documents");
+        
+        for (com.google.firebase.firestore.QueryDocumentSnapshot doc : querySnapshot) {
+            Log.d(TAG, "Game mode document: " + doc.getId() + " -> " + doc.getData());
+            docs.add(doc);
+        }
+        
+        // Sort by min_score
+        Collections.sort(docs, Comparator.comparingLong(this::getMinScore));
+        
+        for (com.google.firebase.firestore.QueryDocumentSnapshot doc : docs) {
+            createModeCard(doc);
+        }
+        
+        showLoading(false);
+        Log.d(TAG, "Finished processing game modes");
     }
 
     private void createModeCard(QueryDocumentSnapshot doc) {
+        Log.d(TAG, "Creating card for document: " + doc.getId() + " with data: " + doc.getData());
+        
+        // Check if required fields exist
+        if (!doc.contains("id")) {
+            Log.w(TAG, "Document missing 'id' field: " + doc.getId());
+            return;
+        }
+        
         int id = doc.getLong("id").intValue();
-        String name = doc.getString("name"); // Add this line to extract name from document
-        Long speed = doc.getLong("speed"); // Get speed value
+        String name = doc.getString("name");
+        if (name == null || name.trim().isEmpty()) {
+            Log.w(TAG, "Document missing or empty 'name' field: " + doc.getId());
+            name = "Unknown Mode";
+        }
+        
+        Long speed = doc.getLong("speed");
         long minScore = getMinScore(doc);
         boolean unlocked = userMaxScore >= minScore;
+
+        Log.d(TAG, "Processing mode: " + name + " (ID: " + id + ", Speed: " + speed + ", MinScore: " + minScore + ", Unlocked: " + unlocked + ")");
 
         // Create card container
         LinearLayout card = new LinearLayout(this);
