@@ -190,11 +190,14 @@ public class SelectModesActivity extends AppCompatActivity {
             name = "Unknown Mode";
         }
         
+        // Create final copy for lambda usage
+        final String finalName = name;
+        
         Long speed = doc.getLong("speed");
         long minScore = getMinScore(doc);
         boolean unlocked = userMaxScore >= minScore;
 
-        Log.d(TAG, "Processing mode: " + name + " (ID: " + id + ", Speed: " + speed + ", MinScore: " + minScore + ", Unlocked: " + unlocked + ")");
+        Log.d(TAG, "Processing mode: " + finalName + " (ID: " + id + ", Speed: " + speed + ", MinScore: " + minScore + ", Unlocked: " + unlocked + ")");
 
         // Create card container
         LinearLayout card = new LinearLayout(this);
@@ -209,7 +212,7 @@ public class SelectModesActivity extends AppCompatActivity {
         card.setLayoutParams(cardParams);
 
         // Set special background based on mode type and unlock status
-        setModeCardBackground(card, name, unlocked);
+        setModeCardBackground(card, finalName, unlocked);
 
         // Header container (emoji + name + selection indicator)
         LinearLayout headerContainer = new LinearLayout(this);
@@ -221,7 +224,7 @@ public class SelectModesActivity extends AppCompatActivity {
 
         // Mode emoji
         TextView modeEmoji = new TextView(this);
-        modeEmoji.setText(getModeEmoji(name));
+        modeEmoji.setText(getModeEmoji(finalName));
         modeEmoji.setTextSize(32);
         LinearLayout.LayoutParams emojiParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -240,14 +243,14 @@ public class SelectModesActivity extends AppCompatActivity {
 
         // Mode name
         TextView nameText = new TextView(this);
-        nameText.setText(name);
+        nameText.setText(finalName);
         nameText.setTextColor(Color.WHITE);
         nameText.setTextSize(22);
         nameText.setTypeface(null, android.graphics.Typeface.BOLD);
 
         // Mode description with speed info
         TextView descriptionText = new TextView(this);
-        String description = getDefaultDescription(name);
+        String description = getDefaultDescription(finalName);
         if (speed != null) {
             description += " • Speed: " + speed;
         }
@@ -293,7 +296,7 @@ public class SelectModesActivity extends AppCompatActivity {
 
         // Set click listener
         if (unlocked) {
-            card.setOnClickListener(v -> selectMode(id, name, card, selectionIndicator));
+            card.setOnClickListener(v -> selectMode(id, finalName, card, selectionIndicator));
         } else {
             card.setOnClickListener(v -> {
                 Toast.makeText(this, "🔒 Unlock by reaching " + minScore + " points!", Toast.LENGTH_SHORT).show();
@@ -303,7 +306,7 @@ public class SelectModesActivity extends AppCompatActivity {
         modesContainer.addView(card);
         
         // Debug logging
-        Log.d(TAG, "Created mode card: " + name + " (ID: " + id + ", Speed: " + speed + ", MinScore: " + minScore + ", Unlocked: " + unlocked + ")");
+        Log.d(TAG, "Created mode card: " + finalName + " (ID: " + id + ", Speed: " + speed + ", MinScore: " + minScore + ", Unlocked: " + unlocked + ")");
     }
 
     private void setModeCardBackground(LinearLayout card, String modeName, boolean unlocked) {
