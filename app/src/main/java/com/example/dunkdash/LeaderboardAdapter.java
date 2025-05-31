@@ -13,10 +13,15 @@ import java.util.List;
 
 public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.ViewHolder> {
     private List<LeaderboardPlayer> players = new ArrayList<>();
+    private String currentUserId;
 
     public void updatePlayers(List<LeaderboardPlayer> newPlayers) {
         this.players = new ArrayList<>(newPlayers);
         notifyDataSetChanged();
+    }
+
+    public void setCurrentUserId(String userId) {
+        this.currentUserId = userId;
     }
 
     @NonNull
@@ -30,7 +35,7 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         LeaderboardPlayer player = players.get(position);
-        holder.bind(player);
+        holder.bind(player, currentUserId);
     }
 
     @Override
@@ -54,7 +59,8 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
             trophyText = itemView.findViewById(R.id.trophy_text);
         }
 
-        public void bind(LeaderboardPlayer player) {
+        public void bind(LeaderboardPlayer player, String currentUserId) {
+            // Handle rank/trophy display
             if (player.isTopThree()) {
                 trophyText.setText(player.getTrophyEmoji());
                 trophyText.setVisibility(View.VISIBLE);
@@ -65,15 +71,47 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
                 rankText.setVisibility(View.VISIBLE);
             }
 
-            nicknameText.setText(player.getNickname());
+            // Set nickname with current user marker
+            String displayName = player.getNickname();
+            if (currentUserId != null && currentUserId.equals(player.getUserId())) {
+                displayName += " (You)";
+            }
+            nicknameText.setText(displayName);
+
             maxScoreText.setText(String.valueOf(player.getMaxScore()));
             totalGamesText.setText(player.getTotalGames() + " games");
 
-            // Highlight top 3 players
-            if (player.isTopThree()) {
-                itemView.setBackgroundResource(R.drawable.leaderboard_top_background);
+            // Set background and text colors based on rank and current user
+            setBackgroundAndColors(player, currentUserId);
+        }
+
+        private void setBackgroundAndColors(LeaderboardPlayer player, String currentUserId) {
+            boolean isCurrentUser = currentUserId != null && currentUserId.equals(player.getUserId());
+            
+            if (isCurrentUser) {
+                // Current user gets special green background
+                itemView.setBackgroundResource(R.drawable.leaderboard_current_user_background);
+                maxScoreText.setTextColor(0xFF4CAF50); // Green
             } else {
-                itemView.setBackgroundResource(R.drawable.leaderboard_normal_background);
+                // Set background and score color based on rank
+                switch (player.getRank()) {
+                    case 1:
+                        itemView.setBackgroundResource(R.drawable.leaderboard_gold_background);
+                        maxScoreText.setTextColor(0xFFFFD700); // Gold
+                        break;
+                    case 2:
+                        itemView.setBackgroundResource(R.drawable.leaderboard_silver_background);
+                        maxScoreText.setTextColor(0xFFC0C0C0); // Silver
+                        break;
+                    case 3:
+                        itemView.setBackgroundResource(R.drawable.leaderboard_bronze_background);
+                        maxScoreText.setTextColor(0xFFCD7F32); // Bronze
+                        break;
+                    default:
+                        itemView.setBackgroundResource(R.drawable.leaderboard_normal_background);
+                        maxScoreText.setTextColor(0xFFCCCCCC); // Light gray
+                        break;
+                }
             }
         }
     }

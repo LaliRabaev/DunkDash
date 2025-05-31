@@ -66,6 +66,9 @@ public class LeaderboardActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         adapter = new LeaderboardAdapter();
+        if (currentUser != null) {
+            adapter.setCurrentUserId(currentUser.getUid());
+        }
         leaderboardRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         leaderboardRecyclerView.setAdapter(adapter);
     }
@@ -109,7 +112,8 @@ public class LeaderboardActivity extends AppCompatActivity {
                                 rank,
                                 nickname,
                                 maxScore,
-                                totalGames != null ? totalGames : 0L
+                                totalGames != null ? totalGames : 0L,
+                                doc.getId() // Add user ID
                         );
                         players.add(player);
                         rank++;

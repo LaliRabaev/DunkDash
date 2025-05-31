@@ -5,12 +5,14 @@ public class LeaderboardPlayer {
     private String nickname;
     private long maxScore;
     private long totalGames;
+    private String userId;
 
-    public LeaderboardPlayer(int rank, String nickname, long maxScore, long totalGames) {
+    public LeaderboardPlayer(int rank, String nickname, long maxScore, long totalGames, String userId) {
         this.rank = rank;
         this.nickname = nickname;
         this.maxScore = maxScore;
         this.totalGames = totalGames;
+        this.userId = userId;
     }
 
     public int getRank() {
@@ -27,6 +29,10 @@ public class LeaderboardPlayer {
 
     public long getTotalGames() {
         return totalGames;
+    }
+
+    public String getUserId() {
+        return userId;
     }
 
     public boolean isTopThree() {
