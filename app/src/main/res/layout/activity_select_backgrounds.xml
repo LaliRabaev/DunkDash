@@ -2,84 +2,171 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:background="@drawable/leaderboard_background"
+    android:padding="16dp">
 
-    <!-- Top bar: Return button and Title -->
-    <LinearLayout
+    <!-- Header with back button and title -->
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:layout_marginBottom="24dp">
 
-        <Button
-            android:id="@+id/btn_return"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:backgroundTint="#1A73E8"
-            android:text="Return"
-            android:textSize="16sp"
-            android:textColor="#FFFFFF"
-            android:layout_marginEnd="16dp"
-            android:elevation="4dp"
-            android:padding="12dp"
-            android:minWidth="100dp"
-            android:layout_gravity="center_vertical"
-            android:fontFamily="sans-serif-medium" />
+        <ImageButton
+            android:id="@+id/back_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/circle_button_background"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Back" />
 
         <TextView
-            android:id="@+id/backgrounds_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Select Background"
+            android:layout_centerInParent="true"
+            android:text="🏞️ Select Background"
+            android:textColor="#FFFFFF"
             android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#1A73E8"
-            android:layout_gravity="center_vertical"/>
-    </LinearLayout>
+            android:textStyle="bold" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="16dp" />
+    </RelativeLayout>
 
-    <!-- Grid of backgrounds -->
-    <GridLayout
-        android:id="@+id/backgrounds_grid"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:columnCount="3"
-        android:useDefaultMargins="true"
-        android:alignmentMode="alignMargins"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp" />
-
-    <!-- TODO: Add RecyclerView/ListView for backgrounds -->
-
-    <!-- Selected Label -->
-    <TextView
-        android:id="@+id/selected_background_text"
+    <!-- Loading indicator -->
+    <ProgressBar
+        android:id="@+id/loading_progress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Selected: None"
-        android:textSize="16sp"
-        android:textColor="#333333"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="8dp" />
+        android:layout_gravity="center"
+        android:layout_marginTop="100dp"
+        android:visibility="gone" />
+
+    <!-- Error message -->
+    <TextView
+        android:id="@+id/error_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="100dp"
+        android:text="Failed to load backgrounds"
+        android:textColor="#CCCCCC"
+        android:textSize="18sp"
+        android:visibility="gone" />
+
+    <!-- Content container -->
+    <ScrollView
+        android:id="@+id/content_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- User Progress Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/leaderboard_current_user_background"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🏆 Your Best Score"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/user_max_score_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#4CAF50"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:layout_gravity="center" />
+
+            </LinearLayout>
+
+            <!-- Selected Background Info -->
+            <LinearLayout
+                android:id="@+id/selected_info_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/leaderboard_gold_background"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="✅ Selected"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/selected_background_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="None"
+                    android:textColor="#FFD700"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <!-- Backgrounds Section Title -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🏞️ Available Backgrounds"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Backgrounds Container -->
+            <LinearLayout
+                android:id="@+id/backgrounds_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+                
+                <!-- Background items will be added programmatically here -->
+                
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </ScrollView>
 
     <!-- Save Button -->
     <Button
         android:id="@+id/save_button"
-        android:layout_width="180dp"
-        android:layout_height="48dp"
-        android:text="Save Selection"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="💾 Save Selection"
         android:textAllCaps="false"
         android:textColor="#FFFFFF"
-        android:backgroundTint="#1A73E8"
-        android:layout_gravity="center_horizontal"
-        android:textSize="16sp"
-        android:elevation="2dp"
-        android:layout_marginTop="8dp"/>
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:background="@drawable/leaderboard_current_user_background"
+        android:layout_marginTop="16dp"
+        android:enabled="false"
+        android:alpha="0.5" />
 
 </LinearLayout>
