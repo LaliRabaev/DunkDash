@@ -122,6 +122,7 @@ public class UserProfileActivity extends AppCompatActivity {
 
     private void loadLastGameInfo(UserProfile profile) {
         String uid = currentUser.getUid();
+        Log.d(TAG, "Querying games collection for user_id: " + uid);
         
         // Query last game from games collection
         db.collection("games")
@@ -130,29 +131,95 @@ public class UserProfileActivity extends AppCompatActivity {
                 .limit(1)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
+                    Log.d(TAG, "Games query completed. Found " + querySnapshot.size() + " documents");
+                    
                     if (!querySnapshot.isEmpty()) {
                         QueryDocumentSnapshot lastGameDoc = (QueryDocumentSnapshot) querySnapshot.getDocuments().get(0);
                         
-                        // Get last game info
+                        // Log all fields in the document to debug
+                        Log.d(TAG, "Last game document data: " + lastGameDoc.getData());
+                        
+                        // Try different possible field names for timestamp
                         com.google.firebase.Timestamp timestamp = lastGameDoc.getTimestamp("start_date");
+                        if (timestamp == null) {
+                            timestamp = lastGameDoc.getTimestamp("startDate");
+                        }
+                        if (timestamp == null) {
+                            timestamp = lastGameDoc.getTimestamp("date");
+                        }
+                        if (timestamp == null) {
+                            timestamp = lastGameDoc.getTimestamp("created_at");
+                        }
+                        
+                        // Try different possible field names for score
                         Long score = lastGameDoc.getLong("score");
+                        if (score == null) {
+                            score = lastGameDoc.getLong("final_score");
+                        }
+                        if (score == null) {
+                            score = lastGameDoc.getLong("game_score");
+                        }
+                        
+                        Log.d(TAG, "Extracted timestamp: " + timestamp + ", score: " + score);
                         
                         if (timestamp != null && score != null) {
                             Date gameDate = timestamp.toDate();
                             profile.setLastGameInfo(gameDate, score);
-                            Log.d(TAG, "Found last game: " + gameDate + ", score: " + score);
+                            Log.d(TAG, "Successfully set last game info: " + gameDate + ", score: " + score);
+                        } else {
+                            Log.w(TAG, "Could not extract timestamp or score from game document");
+                            Log.w(TAG, "Available fields: " + lastGameDoc.getData().keySet());
                         }
                     } else {
-                        Log.d(TAG, "No games found for user");
+                        Log.d(TAG, "No games found for user " + uid);
+                        
+                        // Let's also try a broader query to see if there are any games with different user_id field names
+                        db.collection("games")
+                                .limit(5)
+                                .get()
+                                .addOnSuccessListener(allGamesSnapshot -> {
+                                    Log.d(TAG, "Sample games in collection (" + allGamesSnapshot.size() + " total):");
+                                    for (QueryDocumentSnapshot doc : allGamesSnapshot) {
+                                        Log.d(TAG, "Game doc: " + doc.getData());
+                                    }
+                                })
+                                .addOnFailureListener(e -> Log.e(TAG, "Failed to query sample games", e));
                     }
                     
                     // Display the profile regardless of last game info
                     displayProfile(profile);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load last game info", e);
-                    // Still display profile without last game info
-                    displayProfile(profile);
+                    Log.e(TAG, "Failed to load last game info: " + e.getMessage(), e);
+                    
+                    // Try alternative query with different user field name
+                    Log.d(TAG, "Trying alternative query with 'userId' field...");
+                    db.collection("games")
+                            .whereEqualTo("userId", uid)
+                            .orderBy("start_date", Query.Direction.DESCENDING)
+                            .limit(1)
+                            .get()
+                            .addOnSuccessListener(querySnapshot -> {
+                                Log.d(TAG, "Alternative query found " + querySnapshot.size() + " documents");
+                                if (!querySnapshot.isEmpty()) {
+                                    QueryDocumentSnapshot lastGameDoc = (QueryDocumentSnapshot) querySnapshot.getDocuments().get(0);
+                                    Log.d(TAG, "Alternative query game data: " + lastGameDoc.getData());
+                                    
+                                    com.google.firebase.Timestamp timestamp = lastGameDoc.getTimestamp("start_date");
+                                    Long score = lastGameDoc.getLong("score");
+                                    
+                                    if (timestamp != null && score != null) {
+                                        Date gameDate = timestamp.toDate();
+                                        profile.setLastGameInfo(gameDate, score);
+                                        Log.d(TAG, "Found game with alternative query: " + gameDate + ", score: " + score);
+                                    }
+                                }
+                                displayProfile(profile);
+                            })
+                            .addOnFailureListener(e2 -> {
+                                Log.e(TAG, "Alternative query also failed", e2);
+                                displayProfile(profile);
+                            });
                 });
     }
 
