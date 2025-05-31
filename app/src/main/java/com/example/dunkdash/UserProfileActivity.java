@@ -13,7 +13,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.text.SimpleDateFormat;
@@ -124,51 +123,64 @@ public class UserProfileActivity extends AppCompatActivity {
         String uid = currentUser.getUid();
         Log.d(TAG, "Querying games collection for user_id: " + uid);
         
-        // Query last game from games collection
+        // Query games without ordering to avoid index requirement
+        // We'll sort client-side instead
         db.collection("games")
                 .whereEqualTo("user_id", uid)
-                .orderBy("start_date", Query.Direction.DESCENDING)
-                .limit(1)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     Log.d(TAG, "Games query completed. Found " + querySnapshot.size() + " documents");
                     
                     if (!querySnapshot.isEmpty()) {
-                        QueryDocumentSnapshot lastGameDoc = (QueryDocumentSnapshot) querySnapshot.getDocuments().get(0);
+                        // Find the most recent game by comparing timestamps client-side
+                        QueryDocumentSnapshot mostRecentGame = null;
+                        com.google.firebase.Timestamp mostRecentTimestamp = null;
                         
-                        // Log all fields in the document to debug
-                        Log.d(TAG, "Last game document data: " + lastGameDoc.getData());
+                        for (QueryDocumentSnapshot gameDoc : querySnapshot) {
+                            Log.d(TAG, "Game document data: " + gameDoc.getData());
+                            
+                            // Try different possible field names for timestamp
+                            com.google.firebase.Timestamp timestamp = gameDoc.getTimestamp("start_date");
+                            if (timestamp == null) {
+                                timestamp = gameDoc.getTimestamp("startDate");
+                            }
+                            if (timestamp == null) {
+                                timestamp = gameDoc.getTimestamp("date");
+                            }
+                            if (timestamp == null) {
+                                timestamp = gameDoc.getTimestamp("created_at");
+                            }
+                            
+                            if (timestamp != null) {
+                                if (mostRecentTimestamp == null || timestamp.compareTo(mostRecentTimestamp) > 0) {
+                                    mostRecentTimestamp = timestamp;
+                                    mostRecentGame = gameDoc;
+                                }
+                            }
+                        }
                         
-                        // Try different possible field names for timestamp
-                        com.google.firebase.Timestamp timestamp = lastGameDoc.getTimestamp("start_date");
-                        if (timestamp == null) {
-                            timestamp = lastGameDoc.getTimestamp("startDate");
-                        }
-                        if (timestamp == null) {
-                            timestamp = lastGameDoc.getTimestamp("date");
-                        }
-                        if (timestamp == null) {
-                            timestamp = lastGameDoc.getTimestamp("created_at");
-                        }
-                        
-                        // Try different possible field names for score
-                        Long score = lastGameDoc.getLong("score");
-                        if (score == null) {
-                            score = lastGameDoc.getLong("final_score");
-                        }
-                        if (score == null) {
-                            score = lastGameDoc.getLong("game_score");
-                        }
-                        
-                        Log.d(TAG, "Extracted timestamp: " + timestamp + ", score: " + score);
-                        
-                        if (timestamp != null && score != null) {
-                            Date gameDate = timestamp.toDate();
-                            profile.setLastGameInfo(gameDate, score);
-                            Log.d(TAG, "Successfully set last game info: " + gameDate + ", score: " + score);
+                        if (mostRecentGame != null && mostRecentTimestamp != null) {
+                            // Try different possible field names for score
+                            Long score = mostRecentGame.getLong("score");
+                            if (score == null) {
+                                score = mostRecentGame.getLong("final_score");
+                            }
+                            if (score == null) {
+                                score = mostRecentGame.getLong("game_score");
+                            }
+                            
+                            Log.d(TAG, "Most recent game - timestamp: " + mostRecentTimestamp + ", score: " + score);
+                            
+                            if (score != null) {
+                                Date gameDate = mostRecentTimestamp.toDate();
+                                profile.setLastGameInfo(gameDate, score);
+                                Log.d(TAG, "Successfully set last game info: " + gameDate + ", score: " + score);
+                            } else {
+                                Log.w(TAG, "Could not extract score from most recent game document");
+                                Log.w(TAG, "Available fields: " + mostRecentGame.getData().keySet());
+                            }
                         } else {
-                            Log.w(TAG, "Could not extract timestamp or score from game document");
-                            Log.w(TAG, "Available fields: " + lastGameDoc.getData().keySet());
+                            Log.w(TAG, "No games with valid timestamps found");
                         }
                     } else {
                         Log.d(TAG, "No games found for user " + uid);
@@ -190,28 +202,45 @@ public class UserProfileActivity extends AppCompatActivity {
                     displayProfile(profile);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load last game info: " + e.getMessage(), e);
+                    Log.e(TAG, "Failed to load games: " + e.getMessage(), e);
                     
                     // Try alternative query with different user field name
                     Log.d(TAG, "Trying alternative query with 'userId' field...");
                     db.collection("games")
                             .whereEqualTo("userId", uid)
-                            .orderBy("start_date", Query.Direction.DESCENDING)
-                            .limit(1)
                             .get()
                             .addOnSuccessListener(querySnapshot -> {
                                 Log.d(TAG, "Alternative query found " + querySnapshot.size() + " documents");
+                                
                                 if (!querySnapshot.isEmpty()) {
-                                    QueryDocumentSnapshot lastGameDoc = (QueryDocumentSnapshot) querySnapshot.getDocuments().get(0);
-                                    Log.d(TAG, "Alternative query game data: " + lastGameDoc.getData());
+                                    // Find the most recent game by comparing timestamps client-side
+                                    QueryDocumentSnapshot mostRecentGame = null;
+                                    com.google.firebase.Timestamp mostRecentTimestamp = null;
                                     
-                                    com.google.firebase.Timestamp timestamp = lastGameDoc.getTimestamp("start_date");
-                                    Long score = lastGameDoc.getLong("score");
+                                    for (QueryDocumentSnapshot gameDoc : querySnapshot) {
+                                        com.google.firebase.Timestamp timestamp = gameDoc.getTimestamp("start_date");
+                                        if (timestamp == null) {
+                                            timestamp = gameDoc.getTimestamp("startDate");
+                                        }
+                                        if (timestamp == null) {
+                                            timestamp = gameDoc.getTimestamp("date");
+                                        }
+                                        
+                                        if (timestamp != null) {
+                                            if (mostRecentTimestamp == null || timestamp.compareTo(mostRecentTimestamp) > 0) {
+                                                mostRecentTimestamp = timestamp;
+                                                mostRecentGame = gameDoc;
+                                            }
+                                        }
+                                    }
                                     
-                                    if (timestamp != null && score != null) {
-                                        Date gameDate = timestamp.toDate();
-                                        profile.setLastGameInfo(gameDate, score);
-                                        Log.d(TAG, "Found game with alternative query: " + gameDate + ", score: " + score);
+                                    if (mostRecentGame != null) {
+                                        Long score = mostRecentGame.getLong("score");
+                                        if (score != null && mostRecentTimestamp != null) {
+                                            Date gameDate = mostRecentTimestamp.toDate();
+                                            profile.setLastGameInfo(gameDate, score);
+                                            Log.d(TAG, "Found game with alternative query: " + gameDate + ", score: " + score);
+                                        }
                                     }
                                 }
                                 displayProfile(profile);
