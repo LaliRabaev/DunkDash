@@ -78,6 +78,7 @@ public class HomePageActivity extends AppCompatActivity {
 
                     Long bgId   = userDoc.getLong("current_background");
                     Long ballId = userDoc.getLong("current_basketball");
+                    Long modeId = userDoc.getLong("current_mode");
 
                     // Background lookup
                     if (bgId != null) {
@@ -96,6 +97,15 @@ public class HomePageActivity extends AppCompatActivity {
                                 .get()
                                 .addOnSuccessListener(this::applyBasketball);
                     }
+
+                    // Mode lookup (if needed for UI updates)
+                    if (modeId != null) {
+                        db.collection("game-mode")
+                                .whereEqualTo("id", modeId)
+                                .limit(1)
+                                .get()
+                                .addOnSuccessListener(this::applyMode);
+                    }
                 });
     }
 
@@ -113,6 +123,13 @@ public class HomePageActivity extends AppCompatActivity {
         String path = doc.getString("image_path");
         int resId = getResIdFromPath(path);
         if (resId != 0) playerBasketball.setImageResource(resId);
+    }
+
+    private void applyMode(QuerySnapshot qs) {
+        if (qs.isEmpty()) return;
+        DocumentSnapshot doc = qs.getDocuments().get(0);
+        // Store mode info for game if needed
+        // Could update UI elements based on selected mode
     }
 
     /** Strips "drawable/" prefix and ".png", then resolves R.drawable.name */
