@@ -4,12 +4,12 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.GridLayout;
-import android.widget.ImageView;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,9 +19,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,138 +28,322 @@ import java.util.List;
 import java.util.Map;
 
 public class SelectModesActivity extends AppCompatActivity {
-    private static final String TAG = "SelectModesActivity";
+    private static final String TAG = "SelectModesAct";
 
-    private GridLayout modesGrid;
-    private TextView selectedModeText;
+    private LinearLayout modesContainer;
+    private TextView selectedModeText, userMaxScoreText;
+    private LinearLayout selectedInfoCard;
     private Button saveButton;
+    private ProgressBar loadingProgress;
+    private TextView errorText;
+    private ScrollView contentContainer;
+    private ImageButton backButton;
 
     private FirebaseAuth auth;
     private FirebaseFirestore db;
     private String userId;
     private long userMaxScore;
     private int selectedModeId = -1;
+    private String selectedModeName = "";
+    private View currentlySelectedView = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_select_modes);
 
-        modesGrid = findViewById(R.id.modes_grid);
-        selectedModeText = findViewById(R.id.selected_mode_text);
-        saveButton = findViewById(R.id.save_button);
-        saveButton.setEnabled(false);
-
-        Button btnReturn = findViewById(R.id.btn_return);
-        btnReturn.setOnClickListener(v -> finish());
-
+        initViews();
+        
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         FirebaseUser user = auth.getCurrentUser();
+        
         if (user == null) {
             Log.e(TAG, "User not authenticated");
-            Toast.makeText(this, "Please sign in first", Toast.LENGTH_SHORT).show();
-            finish();
+            showError("Please sign in first");
             return;
         }
+        
         userId = user.getUid();
-
-        saveButton.setOnClickListener(v -> saveSelection());
-
         loadUserMaxScore();
     }
 
+    private void initViews() {
+        modesContainer = findViewById(R.id.modes_container);
+        selectedModeText = findViewById(R.id.selected_mode_text);
+        userMaxScoreText = findViewById(R.id.user_max_score_text);
+        selectedInfoCard = findViewById(R.id.selected_info_card);
+        saveButton = findViewById(R.id.save_button);
+        loadingProgress = findViewById(R.id.loading_progress);
+        errorText = findViewById(R.id.error_text);
+        contentContainer = findViewById(R.id.content_container);
+        backButton = findViewById(R.id.back_button);
+
+        backButton.setOnClickListener(v -> finish());
+        saveButton.setOnClickListener(v -> saveSelection());
+    }
+
     private void loadUserMaxScore() {
+        showLoading(true);
+        
         db.collection("users").document(userId)
                 .get()
                 .addOnSuccessListener(doc -> {
                     userMaxScore = doc.contains("max_score") ? doc.getLong("max_score") : 0;
+                    userMaxScoreText.setText(String.valueOf(userMaxScore));
                     Log.d(TAG, "User max_score=" + userMaxScore);
                     loadModes();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed loading max_score", e);
-                    Toast.makeText(this, "Error loading user data", Toast.LENGTH_SHORT).show();
+                    showError("Error loading user data");
                 });
     }
 
     private void loadModes() {
-        modesGrid.removeAllViews();
+        modesContainer.removeAllViews();
+        
         db.collection("game-mode").get()
-                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-                    @Override
-                    public void onComplete(Task<QuerySnapshot> task) {
-                        if (task.isSuccessful() && task.getResult() != null) {
-                            List<QueryDocumentSnapshot> docs = new ArrayList<>();
-                            for (QueryDocumentSnapshot doc : task.getResult()) {
-                                docs.add(doc);
-                            }
-                            // Fix: Safe sorting with proper min_score handling
-                            Collections.sort(docs, Comparator.comparingLong(d -> getMinScore(d)));
-
-                            for (QueryDocumentSnapshot doc : docs) {
-                                int id = doc.getLong("id").intValue();
-                                String name = doc.getString("name");
-                                String path = doc.getString("image_path");
-                                long minScore = getMinScore(doc);
-                                boolean unlocked = userMaxScore >= minScore;
-
-                                String resName = path.replaceFirst("^drawable/", "");
-                                int dot = resName.lastIndexOf('.');
-                                if (dot > 0) resName = resName.substring(0, dot);
-                                int resId = getResources().getIdentifier(resName, "drawable", getPackageName());
-                                if (resId == 0) {
-                                    Log.w(TAG, "Drawable not found: " + path);
-                                    continue;
-                                }
-
-                                FrameLayout container = new FrameLayout(SelectModesActivity.this);
-                                GridLayout.LayoutParams glParams = new GridLayout.LayoutParams();
-                                glParams.width = GridLayout.LayoutParams.WRAP_CONTENT;
-                                glParams.height = GridLayout.LayoutParams.WRAP_CONTENT;
-                                glParams.setGravity(Gravity.CENTER);
-                                glParams.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-                                container.setLayoutParams(glParams);
-
-                                ImageView iv = new ImageView(SelectModesActivity.this);
-                                int size = dpToPx(90);
-                                FrameLayout.LayoutParams ivParams = new FrameLayout.LayoutParams(size, size);
-                                ivParams.gravity = Gravity.CENTER;
-                                iv.setLayoutParams(ivParams);
-                                iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                                iv.setImageResource(resId);
-
-                                if (unlocked) {
-                                    iv.setAlpha(1f);
-                                    iv.setOnClickListener(v -> {
-                                        selectedModeId = id;
-                                        selectedModeText.setText("Selected: " + name);
-                                        saveButton.setEnabled(true);
-                                        highlightSelection(container);
-                                    });
-                                } else {
-                                    iv.setAlpha(0.3f);
-                                    iv.setOnClickListener(v -> Toast.makeText(SelectModesActivity.this,
-                                            "Locked until score: " + minScore,
-                                            Toast.LENGTH_SHORT).show());
-                                }
-
-                                container.addView(iv);
-                                modesGrid.addView(container);
-                            }
-                        } else {
-                            Toast.makeText(SelectModesActivity.this,
-                                    "Failed to load options", Toast.LENGTH_SHORT).show();
-                        }
+                .addOnSuccessListener(querySnapshot -> {
+                    List<QueryDocumentSnapshot> docs = new ArrayList<>();
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        docs.add(doc);
                     }
+                    
+                    // Sort by min_score
+                    Collections.sort(docs, Comparator.comparingLong(this::getMinScore));
+                    
+                    for (QueryDocumentSnapshot doc : docs) {
+                        createModeCard(doc);
+                    }
+                    
+                    showLoading(false);
                 })
-                .addOnFailureListener(e -> Toast.makeText(SelectModesActivity.this,
-                        "Error fetching modes: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to load modes", e);
+                    showError("Failed to load game modes");
+                });
+    }
+
+    private void createModeCard(QueryDocumentSnapshot doc) {
+        int id = doc.getLong("id").intValue();
+        String name = doc.getString("name");
+        String description = doc.getString("description");
+        long minScore = getMinScore(doc);
+        boolean unlocked = userMaxScore >= minScore;
+
+        // Create card container
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(20));
+        
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        cardParams.setMargins(0, 0, 0, dpToPx(12));
+        card.setLayoutParams(cardParams);
+
+        // Set special background based on mode type and unlock status
+        setModeCardBackground(card, name, unlocked);
+
+        // Header container (emoji + name + selection indicator)
+        LinearLayout headerContainer = new LinearLayout(this);
+        headerContainer.setOrientation(LinearLayout.HORIZONTAL);
+        headerContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        // Mode emoji
+        TextView modeEmoji = new TextView(this);
+        modeEmoji.setText(getModeEmoji(name));
+        modeEmoji.setTextSize(32);
+        LinearLayout.LayoutParams emojiParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        emojiParams.setMargins(0, 0, dpToPx(16), 0);
+        modeEmoji.setLayoutParams(emojiParams);
+
+        // Info container (name + description + status)
+        LinearLayout infoContainer = new LinearLayout(this);
+        infoContainer.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams infoParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+        );
+        infoContainer.setLayoutParams(infoParams);
+
+        // Mode name
+        TextView nameText = new TextView(this);
+        nameText.setText(name);
+        nameText.setTextColor(Color.WHITE);
+        nameText.setTextSize(22);
+        nameText.setTypeface(null, android.graphics.Typeface.BOLD);
+
+        // Mode description
+        TextView descriptionText = new TextView(this);
+        if (description != null && !description.trim().isEmpty()) {
+            descriptionText.setText(description);
+        } else {
+            descriptionText.setText(getDefaultDescription(name));
+        }
+        descriptionText.setTextColor(0xFFCCCCCC);
+        descriptionText.setTextSize(14);
+        descriptionText.setPadding(0, dpToPx(4), 0, dpToPx(8));
+
+        // Status text
+        TextView statusText = new TextView(this);
+        if (unlocked) {
+            statusText.setText("✅ Unlocked");
+            statusText.setTextColor(0xFF4CAF50); // Green
+        } else {
+            statusText.setText("🔒 Requires " + minScore + " points");
+            statusText.setTextColor(0xFFFFB74D); // Orange
+        }
+        statusText.setTextSize(14);
+        statusText.setTypeface(null, android.graphics.Typeface.BOLD);
+
+        infoContainer.addView(nameText);
+        infoContainer.addView(descriptionText);
+        infoContainer.addView(statusText);
+
+        // Selection indicator
+        TextView selectionIndicator = new TextView(this);
+        selectionIndicator.setText("⭐");
+        selectionIndicator.setTextSize(28);
+        selectionIndicator.setVisibility(View.GONE);
+        LinearLayout.LayoutParams indicatorParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        indicatorParams.setMargins(dpToPx(8), 0, 0, 0);
+        selectionIndicator.setLayoutParams(indicatorParams);
+
+        // Add views to header
+        headerContainer.addView(modeEmoji);
+        headerContainer.addView(infoContainer);
+        headerContainer.addView(selectionIndicator);
+
+        // Add header to card
+        card.addView(headerContainer);
+
+        // Set click listener
+        if (unlocked) {
+            card.setOnClickListener(v -> selectMode(id, name, card, selectionIndicator));
+        } else {
+            card.setOnClickListener(v -> {
+                Toast.makeText(this, "🔒 Unlock by reaching " + minScore + " points!", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        modesContainer.addView(card);
+    }
+
+    private void setModeCardBackground(LinearLayout card, String modeName, boolean unlocked) {
+        if (!unlocked) {
+            card.setBackgroundResource(R.drawable.leaderboard_bronze_background);
+            return;
+        }
+
+        // Set special backgrounds based on mode type
+        switch (modeName.toLowerCase()) {
+            case "easy":
+                card.setBackgroundResource(R.drawable.leaderboard_normal_background);
+                break;
+            case "medium":
+                card.setBackgroundResource(R.drawable.leaderboard_silver_background);
+                break;
+            case "hard":
+                card.setBackgroundResource(R.drawable.leaderboard_bronze_background);
+                break;
+            default:
+                card.setBackgroundResource(R.drawable.leaderboard_normal_background);
+                break;
+        }
+    }
+
+    private String getModeEmoji(String modeName) {
+        switch (modeName.toLowerCase()) {
+            case "easy":
+                return "😊";
+            case "medium":
+                return "😐";
+            case "hard":
+                return "💀";
+            default:
+                return "🎮";
+        }
+    }
+
+    private String getDefaultDescription(String modeName) {
+        switch (modeName.toLowerCase()) {
+            case "easy":
+                return "Perfect for beginners • Relaxed gameplay";
+            case "medium":
+                return "Balanced challenge • Good for improving";
+            case "hard":
+                return "Ultimate challenge • For skilled players only";
+            default:
+                return "A challenging game mode";
+        }
+    }
+
+    private void selectMode(int id, String name, View cardView, View indicator) {
+        // Clear previous selection
+        if (currentlySelectedView != null) {
+            currentlySelectedView.setVisibility(View.GONE);
+            // Reset background based on mode type
+            View parentCard = (View) currentlySelectedView.getParent().getParent();
+            setModeCardBackground((LinearLayout) parentCard, selectedModeName, true);
+        }
+
+        // Set new selection
+        selectedModeId = id;
+        selectedModeName = name;
+        currentlySelectedView = indicator;
+        
+        // Update UI
+        indicator.setVisibility(View.VISIBLE);
+        cardView.setBackgroundResource(R.drawable.leaderboard_current_user_background);
+        
+        selectedModeText.setText(name);
+        selectedInfoCard.setVisibility(View.VISIBLE);
+        
+        saveButton.setEnabled(true);
+        saveButton.setAlpha(1.0f);
+
+        Log.d(TAG, "Selected mode: " + name + " (ID: " + id + ")");
+    }
+
+    private void saveSelection() {
+        if (selectedModeId < 0) {
+            Toast.makeText(this, "Please select a game mode first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        saveButton.setEnabled(false);
+        saveButton.setText("💾 Saving...");
+
+        Map<String, Object> update = new HashMap<>();
+        update.put("current_mode", selectedModeId);
+        
+        db.collection("users").document(userId)
+                .update(update)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "✅ " + selectedModeName + " mode selected!", Toast.LENGTH_SHORT).show();
+                    finish(); // Return to previous screen
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to save selection", e);
+                    Toast.makeText(this, "❌ Failed to save selection", Toast.LENGTH_SHORT).show();
+                    saveButton.setEnabled(true);
+                    saveButton.setText("💾 Save Selection");
+                });
     }
 
     private long getMinScore(QueryDocumentSnapshot doc) {
         if (!doc.contains("min_score")) {
-            return 0; // Default to 0 if field doesn't exist
+            return 0;
         }
         
         Object minScoreObj = doc.get("min_score");
@@ -176,34 +357,21 @@ public class SelectModesActivity extends AppCompatActivity {
                 return 0;
             }
         }
-        return 0; // Default fallback
+        return 0;
     }
 
-    private void highlightSelection(View selected) {
-        for (int i = 0; i < modesGrid.getChildCount(); i++) {
-            View v = modesGrid.getChildAt(i);
-            if (v == selected) {
-                GradientDrawable border = new GradientDrawable();
-                border.setShape(GradientDrawable.RECTANGLE);
-                border.setStroke(dpToPx(4), Color.parseColor("#3F51B5"));
-                border.setCornerRadius(dpToPx(8));
-                v.setBackground(border);
-            } else {
-                v.setBackground(null);
-            }
-        }
+    private void showLoading(boolean show) {
+        loadingProgress.setVisibility(show ? View.VISIBLE : View.GONE);
+        contentContainer.setVisibility(show ? View.GONE : View.VISIBLE);
+        errorText.setVisibility(View.GONE);
     }
 
-    private void saveSelection() {
-        if (selectedModeId < 0) return;
-        Map<String, Object> update = new HashMap<>();
-        update.put("current_mode", selectedModeId);
-        db.collection("users").document(userId)
-                .update(update)
-                .addOnSuccessListener(aVoid -> Toast.makeText(this,
-                        "Selection saved!", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(this,
-                        "Error saving selection: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    private void showError(String message) {
+        loadingProgress.setVisibility(View.GONE);
+        contentContainer.setVisibility(View.GONE);
+        errorText.setVisibility(View.VISIBLE);
+        errorText.setText(message);
+        Log.e(TAG, "Showing error: " + message);
     }
 
     private int dpToPx(int dp) {
