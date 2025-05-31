@@ -76,8 +76,15 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
             // Set nickname and show/hide "You" indicator
             nicknameText.setText(player.getNickname());
             
+            // Debug logging to check user ID matching
+            android.util.Log.d("LeaderboardAdapter", "Player: " + player.getNickname() + 
+                              ", PlayerID: " + player.getUserId() + 
+                              ", CurrentUserID: " + currentUserId + 
+                              ", Match: " + (currentUserId != null && currentUserId.equals(player.getUserId())));
+            
             if (currentUserId != null && currentUserId.equals(player.getUserId())) {
                 youIndicator.setVisibility(View.VISIBLE);
+                android.util.Log.d("LeaderboardAdapter", "Showing (You) indicator for: " + player.getNickname());
             } else {
                 youIndicator.setVisibility(View.GONE);
             }

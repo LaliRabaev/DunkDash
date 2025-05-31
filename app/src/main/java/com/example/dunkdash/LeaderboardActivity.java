@@ -67,7 +67,11 @@ public class LeaderboardActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         adapter = new LeaderboardAdapter();
         if (currentUser != null) {
-            adapter.setCurrentUserId(currentUser.getUid());
+            String uid = currentUser.getUid();
+            adapter.setCurrentUserId(uid);
+            Log.d(TAG, "Setting current user ID in adapter: " + uid);
+        } else {
+            Log.w(TAG, "Current user is null, cannot set user ID in adapter");
         }
         leaderboardRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         leaderboardRecyclerView.setAdapter(adapter);
