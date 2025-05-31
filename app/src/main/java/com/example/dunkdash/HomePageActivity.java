@@ -2,6 +2,7 @@ package com.example.dunkdash;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
@@ -16,6 +17,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
 
 public class HomePageActivity extends AppCompatActivity {
+    private static final String TAG = "HomePageActivity";
 
     private boolean gameStarted = false;
     private ImageView homeBackground, playerBasketball;
@@ -113,16 +115,28 @@ public class HomePageActivity extends AppCompatActivity {
         if (qs.isEmpty()) return;
         DocumentSnapshot doc = qs.getDocuments().get(0);
         String path = doc.getString("image_path");
+        Log.d(TAG, "Applying background path: " + path);
         int resId = getResIdFromPath(path);
-        if (resId != 0) homeBackground.setImageResource(resId);
+        Log.d(TAG, "Resolved background resource ID: " + resId);
+        if (resId != 0) {
+            homeBackground.setImageResource(resId);
+        } else {
+            Log.w(TAG, "Background resource not found for path: " + path);
+        }
     }
 
     private void applyBasketball(QuerySnapshot qs) {
         if (qs.isEmpty()) return;
         DocumentSnapshot doc = qs.getDocuments().get(0);
         String path = doc.getString("image_path");
+        Log.d(TAG, "Applying basketball path: " + path);
         int resId = getResIdFromPath(path);
-        if (resId != 0) playerBasketball.setImageResource(resId);
+        Log.d(TAG, "Resolved basketball resource ID: " + resId);
+        if (resId != 0) {
+            playerBasketball.setImageResource(resId);
+        } else {
+            Log.w(TAG, "Basketball resource not found for path: " + path);
+        }
     }
 
     private void applyMode(QuerySnapshot qs) {
@@ -132,17 +146,35 @@ public class HomePageActivity extends AppCompatActivity {
         // Could update UI elements based on selected mode
     }
 
-    /** Strips "drawable/" prefix and ".png", then resolves R.drawable.name */
+    /** Strips "drawable/" prefix and file extension, then resolves R.drawable.name */
     private int getResIdFromPath(String path) {
-        if (path == null) return 0;
-        String name = path;
+        if (path == null || path.trim().isEmpty()) {
+            Log.w(TAG, "Empty or null path provided");
+            return 0;
+        }
+        
+        String name = path.trim();
+        Log.d(TAG, "Original path: " + name);
+        
+        // Remove drawable/ prefix if present
         if (name.startsWith("drawable/")) {
             name = name.substring("drawable/".length());
         }
-        if (name.endsWith(".png")) {
-            name = name.substring(0, name.length() - 4);
+        
+        // Remove any file extension
+        int lastDot = name.lastIndexOf('.');
+        if (lastDot > 0) {
+            name = name.substring(0, lastDot);
         }
-        return getResources().getIdentifier(name, "drawable", getPackageName());
+        
+        Log.d(TAG, "Processed resource name: " + name);
+        
+        int resId = getResources().getIdentifier(name, "drawable", getPackageName());
+        if (resId == 0) {
+            Log.w(TAG, "Resource not found for name: " + name + " in package: " + getPackageName());
+        }
+        
+        return resId;
     }
 
     private void startGame() {
