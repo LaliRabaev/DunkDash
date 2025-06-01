@@ -29,7 +29,7 @@ public class SettingsActivity extends AppCompatActivity {
     private EditText nicknameInput;
     private Button saveNicknameButton, resetProgressButton, logoutButton;
     private TextView currentEmailText, statsText;
-    private SwitchCompat backgroundMusicSwitch, soundEffectsSwitch, vibrationSwitch, autoSaveSwitch;
+    private SwitchCompat backgroundMusicSwitch, soundEffectsSwitch;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -59,8 +59,6 @@ public class SettingsActivity extends AppCompatActivity {
         
         backgroundMusicSwitch = findViewById(R.id.backgroundMusicSwitch);
         soundEffectsSwitch = findViewById(R.id.soundEffectsSwitch);
-        vibrationSwitch = findViewById(R.id.vibrationSwitch);
-        autoSaveSwitch = findViewById(R.id.autoSaveSwitch);
     }
 
     private void initializeFirebase() {
@@ -101,31 +99,11 @@ public class SettingsActivity extends AppCompatActivity {
                 Toast.makeText(this, "🔇 Sound effects disabled", Toast.LENGTH_SHORT).show();
             }
         });
-        
-        vibrationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            saveSetting("vibration", isChecked);
-            if (isChecked) {
-                Toast.makeText(this, "📳 Vibration enabled", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "📳 Vibration disabled", Toast.LENGTH_SHORT).show();
-            }
-        });
-        
-        autoSaveSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            saveSetting("auto_save", isChecked);
-            if (isChecked) {
-                Toast.makeText(this, "💾 Auto-save enabled", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "💾 Auto-save disabled", Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 
     private void loadSettings() {
         backgroundMusicSwitch.setChecked(prefs.getBoolean("background_music", true));
         soundEffectsSwitch.setChecked(prefs.getBoolean("sound_effects", true));
-        vibrationSwitch.setChecked(prefs.getBoolean("vibration", true));
-        autoSaveSwitch.setChecked(prefs.getBoolean("auto_save", true));
     }
 
     private void loadUserData() {
