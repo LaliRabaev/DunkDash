@@ -49,6 +49,12 @@
             android:name=".LeaderboardActivity"
             android:screenOrientation="portrait"
             android:exported="false" />
+        <!-- Settings Activity -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.DunkDash" />
     </application>
 
 </manifest>

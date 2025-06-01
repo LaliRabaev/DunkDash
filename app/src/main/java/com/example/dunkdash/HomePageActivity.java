@@ -77,6 +77,10 @@ public class HomePageActivity extends AppCompatActivity {
             Log.d(TAG, "Leaderboard icon clicked!");
             startActivity(new Intent(this, LeaderboardActivity.class));
         });
+        findViewById(R.id.setting_icon).setOnClickListener(v -> {
+            Log.d(TAG, "Settings icon clicked!");
+            startActivity(new Intent(this, SettingsActivity.class));
+        });
     }
 
     @Override

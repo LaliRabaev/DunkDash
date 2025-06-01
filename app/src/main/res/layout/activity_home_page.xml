@@ -80,14 +80,14 @@
             android:id="@+id/cup_icon"
             android:layout_width="65dp"
             android:layout_height="65dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="20dp"
             android:src="@drawable/cup_icon" />
 
         <ImageView
             android:id="@+id/leaderboard_icon"
             android:layout_width="65dp"
             android:layout_height="65dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="20dp"
             android:src="@drawable/leaderboard_icon" />
 
         <ImageView
@@ -111,7 +111,7 @@
             android:id="@+id/ball_icon"
             android:layout_width="65dp"
             android:layout_height="65dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="20dp"
             android:src="@drawable/ball_icon"
             android:clickable="true"
             android:focusable="true" />
@@ -120,7 +120,7 @@
             android:id="@+id/pitches_icon"
             android:layout_width="65dp"
             android:layout_height="65dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="20dp"
             android:src="@drawable/pitches_icon"
             android:clickable="true"
             android:focusable="true" />
