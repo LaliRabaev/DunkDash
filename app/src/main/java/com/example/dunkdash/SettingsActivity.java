@@ -22,7 +22,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends AppCompatActivity implements LogoutDialog.LogoutDialogListener {
     private static final String TAG = "SettingsActivity";
 
     private ImageButton backButton;
@@ -79,7 +79,7 @@ public class SettingsActivity extends AppCompatActivity {
         
         resetProgressButton.setOnClickListener(v -> showResetConfirmation());
         
-        logoutButton.setOnClickListener(v -> showLogoutConfirmation());
+        logoutButton.setOnClickListener(v -> showLogoutDialog());
         
         // Save settings when switches are toggled
         backgroundMusicSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -229,16 +229,23 @@ public class SettingsActivity extends AppCompatActivity {
                 });
     }
 
-    private void showLogoutConfirmation() {
-        new AlertDialog.Builder(this)
-                .setTitle("🚪 Logout")
-                .setMessage("Are you sure you want to logout?\n\nYou'll need to sign in again to access your account.")
-                .setPositiveButton("Logout", (dialog, which) -> logout())
-                .setNegativeButton("Cancel", null)
-                .show();
+    private void showLogoutDialog() {
+        LogoutDialog dialog = new LogoutDialog(this, this);
+        dialog.show();
     }
 
-    private void logout() {
+    @Override
+    public void onLogoutConfirmed() {
+        performLogout();
+    }
+
+    @Override
+    public void onLogoutCancelled() {
+        // User cancelled logout, do nothing
+        Log.d(TAG, "Logout cancelled by user");
+    }
+
+    private void performLogout() {
         // Clear all local settings
         prefs.edit().clear().apply();
         
