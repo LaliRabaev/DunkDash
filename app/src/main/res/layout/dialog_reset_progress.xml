@@ -7,11 +7,11 @@
     android:padding="28dp"
     android:layout_gravity="center">
 
-    <!-- Logout Icon -->
+    <!-- Reset Icon -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="🚪"
+        android:text="🔄"
         android:textSize="56sp"
         android:layout_gravity="center"
         android:layout_marginBottom="20dp" />
@@ -20,7 +20,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Logout Confirmation"
+        android:text="Reset Progress"
         android:textSize="22sp"
         android:textStyle="bold"
         android:textColor="#FFFFFF"
@@ -31,7 +31,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Are you sure you want to logout?\n\nYou'll need to sign in again to access your account and continue playing."
+        android:text="This will reset all your game progress including:\n\n• Your best score\n• Total games played\n• Unlocked items\n\nThis action cannot be undone. Are you sure?"
         android:textSize="15sp"
         android:textColor="#CCCCCC"
         android:gravity="center"
@@ -58,11 +58,11 @@
             android:layout_marginEnd="10dp" />
 
         <Button
-            android:id="@+id/logoutButton"
+            android:id="@+id/resetButton"
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:layout_weight="1"
-            android:text="🚪 Logout"
+            android:text="🔄 Reset"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="16sp"

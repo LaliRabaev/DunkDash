@@ -22,7 +22,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SettingsActivity extends AppCompatActivity implements LogoutDialog.LogoutDialogListener {
+public class SettingsActivity extends AppCompatActivity implements LogoutDialog.LogoutDialogListener, ResetProgressDialog.ResetProgressDialogListener {
     private static final String TAG = "SettingsActivity";
 
     private ImageButton backButton;
@@ -77,7 +77,7 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
         
         saveNicknameButton.setOnClickListener(v -> saveNickname());
         
-        resetProgressButton.setOnClickListener(v -> showResetConfirmation());
+        resetProgressButton.setOnClickListener(v -> showResetDialog());
         
         logoutButton.setOnClickListener(v -> showLogoutDialog());
         
@@ -196,16 +196,37 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
         prefs.edit().putBoolean(key, value).apply();
     }
 
-    private void showResetConfirmation() {
-        new AlertDialog.Builder(this)
-                .setTitle("🔄 Reset Progress")
-                .setMessage("This will reset all your game progress including:\n\n• Your best score\n• Total games played\n• Unlocked items\n\nThis action cannot be undone. Are you sure?")
-                .setPositiveButton("Reset", (dialog, which) -> resetProgress())
-                .setNegativeButton("Cancel", null)
-                .show();
+    private void showResetDialog() {
+        ResetProgressDialog dialog = new ResetProgressDialog(this, this);
+        dialog.show();
     }
 
-    private void resetProgress() {
+    private void showLogoutDialog() {
+        LogoutDialog dialog = new LogoutDialog(this, this);
+        dialog.show();
+    }
+
+    @Override
+    public void onLogoutConfirmed() {
+        performLogout();
+    }
+
+    @Override
+    public void onLogoutCancelled() {
+        Log.d(TAG, "Logout cancelled by user");
+    }
+
+    @Override
+    public void onResetConfirmed() {
+        performReset();
+    }
+
+    @Override
+    public void onResetCancelled() {
+        Log.d(TAG, "Reset cancelled by user");
+    }
+
+    private void performReset() {
         if (userId == null) {
             Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show();
             return;
@@ -227,22 +248,6 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
                     Log.e(TAG, "Failed to reset progress", e);
                     Toast.makeText(this, "❌ Failed to reset progress", Toast.LENGTH_SHORT).show();
                 });
-    }
-
-    private void showLogoutDialog() {
-        LogoutDialog dialog = new LogoutDialog(this, this);
-        dialog.show();
-    }
-
-    @Override
-    public void onLogoutConfirmed() {
-        performLogout();
-    }
-
-    @Override
-    public void onLogoutCancelled() {
-        // User cancelled logout, do nothing
-        Log.d(TAG, "Logout cancelled by user");
     }
 
     private void performLogout() {

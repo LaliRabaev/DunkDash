@@ -54,7 +54,7 @@
                 android:background="@drawable/leaderboard_current_user_background"
                 android:orientation="vertical"
                 android:padding="20dp"
-                android:layout_marginBottom="20dp">
+                android:layout_marginBottom="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -63,7 +63,7 @@
                     android:textColor="#FFFFFF"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="20dp" />
+                    android:layout_marginBottom="16dp" />
 
                 <!-- Nickname Change -->
                 <LinearLayout
@@ -133,7 +133,7 @@
                 android:background="@drawable/leaderboard_normal_background"
                 android:orientation="vertical"
                 android:padding="20dp"
-                android:layout_marginBottom="20dp">
+                android:layout_marginBottom="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -142,14 +142,14 @@
                     android:textColor="#FFFFFF"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="20dp" />
+                    android:layout_marginBottom="16dp" />
 
                 <!-- Background Music -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginBottom="16dp">
+                    android:layout_marginBottom="12dp">
 
                     <TextView
                         android:layout_width="0dp"
@@ -200,7 +200,7 @@
                 android:background="@drawable/leaderboard_normal_background"
                 android:orientation="vertical"
                 android:padding="20dp"
-                android:layout_marginBottom="20dp">
+                android:layout_marginBottom="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -226,13 +226,13 @@
             <Button
                 android:id="@+id/resetProgressButton"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
+                android:layout_height="50dp"
                 android:text="🔄 Reset All Progress"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="16sp"
                 android:background="@drawable/leaderboard_bronze_background"
-                android:layout_marginBottom="20dp" />
+                android:layout_marginBottom="16dp" />
 
         </LinearLayout>
 
