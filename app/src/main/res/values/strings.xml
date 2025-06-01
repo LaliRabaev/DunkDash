@@ -4,7 +4,7 @@
     <string name="login_background_path">"@drawable/login_background"</string>
     <string name="login_done_button">"Done"</string>
     <string name="password_hint">"Password"</string>
-    <string name="username_hint">"Username"</string>
+    <string name="username_hint">Enter your email address</string>
     <string name="app_logo">"app logo"</string>
     <string name="login_button">"Login"</string>
     <string name="sign_up_button">"Sign Up"</string>

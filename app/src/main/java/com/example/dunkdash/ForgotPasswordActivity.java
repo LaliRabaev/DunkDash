@@ -71,19 +71,18 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         showLoading(true);
         hideStatusMessage();
 
-        // Use simple sendPasswordResetEmail without ActionCodeSettings
         mAuth.sendPasswordResetEmail(email)
                 .addOnCompleteListener(task -> {
                     showLoading(false);
                     if (task.isSuccessful()) {
                         Log.d(TAG, "Password reset email sent successfully to: " + email);
-                        showSuccess("✅ Reset link sent to " + email + "!\n\nPlease check:\n• Your email inbox\n• Spam/junk folder\n• Email may take a few minutes");
+                        showSuccess("✅ Reset link sent to " + email + "!\n\n• Check your email inbox\n• Check spam/junk folder\n• Email may take a few minutes to arrive\n• Click the link to reset your password");
                         
                         // Clear the email field
                         etEmail.setText("");
                         
-                        // Auto-close after 4 seconds
-                        etEmail.postDelayed(() -> finish(), 4000);
+                        // Auto-close after 5 seconds
+                        etEmail.postDelayed(() -> finish(), 5000);
                         
                     } else {
                         Exception exception = task.getException();
@@ -97,23 +96,23 @@ public class ForgotPasswordActivity extends AppCompatActivity {
                             
                             switch (errorCode) {
                                 case "ERROR_USER_NOT_FOUND":
-                                    errorMessage = "No account found with this email address";
+                                    errorMessage = "❌ Email not registered!\n\nThis email address is not associated with any account. Please:\n• Check the email spelling\n• Use a different email\n• Create a new account if needed";
                                     break;
                                 case "ERROR_INVALID_EMAIL":
-                                    errorMessage = "Invalid email address format";
+                                    errorMessage = "❌ Invalid email format. Please enter a valid email address.";
                                     break;
                                 case "ERROR_TOO_MANY_REQUESTS":
-                                    errorMessage = "Too many requests. Please wait before trying again";
+                                    errorMessage = "❌ Too many requests. Please wait a few minutes before trying again.";
                                     break;
                                 default:
-                                    errorMessage = firebaseException.getMessage();
+                                    errorMessage = "❌ " + firebaseException.getMessage();
                                     break;
                             }
                         } else if (exception != null) {
-                            errorMessage = exception.getMessage();
+                            errorMessage = "❌ " + exception.getMessage();
                         }
                         
-                        showError("❌ " + errorMessage);
+                        showError(errorMessage);
                     }
                 });
     }
@@ -135,14 +134,16 @@ public class ForgotPasswordActivity extends AppCompatActivity {
     private void showError(String message) {
         statusMessage.setText(message);
         statusMessage.setTextColor(0xFFFF5252); // Red
+        statusMessage.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START); // Left align
         statusMessage.setVisibility(View.VISIBLE);
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "Error occurred", Toast.LENGTH_LONG).show();
         Log.e(TAG, "Error: " + message);
     }
 
     private void showSuccess(String message) {
         statusMessage.setText(message);
         statusMessage.setTextColor(0xFF4CAF50); // Green
+        statusMessage.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START); // Left align
         statusMessage.setVisibility(View.VISIBLE);
         Toast.makeText(this, "Reset email sent! Check your inbox.", Toast.LENGTH_LONG).show();
         Log.d(TAG, "Success: " + message);
