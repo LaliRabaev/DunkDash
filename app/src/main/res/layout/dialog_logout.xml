@@ -1,75 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="320dp"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/leaderboard_background"
-    android:padding="28dp"
-    android:layout_gravity="center">
+    android:padding="16dp"
+    android:background="@android:color/white">
 
-    <!-- Logout Icon -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="🚪"
-        android:textSize="56sp"
-        android:layout_gravity="center"
-        android:layout_marginBottom="20dp" />
-
-    <!-- Title -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Logout Confirmation"
-        android:textSize="22sp"
+        android:textSize="24sp"
         android:textStyle="bold"
-        android:textColor="#FFFFFF"
         android:gravity="center"
-        android:layout_marginBottom="20dp" />
+        android:layout_marginBottom="16dp"/>
 
-    <!-- Message -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Are you sure you want to logout?\n\nYou'll need to sign in again to access your account and continue playing."
-        android:textSize="15sp"
-        android:textColor="#CCCCCC"
+        android:textSize="16sp"
         android:gravity="center"
-        android:layout_marginBottom="28dp"
-        android:lineSpacingExtra="3dp" />
+        android:layout_marginBottom="24dp"/>
 
-    <!-- Buttons -->
-    <LinearLayout
+    <Button
+        android:id="@+id/logoutButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center">
+        android:text="🚪 Logout"
+        android:layout_marginBottom="8dp"/>
 
-        <Button
-            android:id="@+id/cancelButton"
-            android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:layout_weight="1"
-            android:text="❌ Cancel"
-            android:textAllCaps="false"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:background="@drawable/leaderboard_normal_background"
-            android:layout_marginEnd="10dp" />
-
-        <Button
-            android:id="@+id/logoutButton"
-            android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:layout_weight="1"
-            android:text="🚪 Logout"
-            android:textAllCaps="false"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:background="@drawable/leaderboard_bronze_background"
-            android:layout_marginStart="10dp" />
-
-    </LinearLayout>
+    <Button
+        android:id="@+id/cancelButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="❌ Cancel"/>
 
 </LinearLayout>

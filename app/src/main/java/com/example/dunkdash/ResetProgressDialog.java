@@ -2,8 +2,6 @@ package com.example.dunkdash;
 
 import android.app.Dialog;
 import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.Window;
 import android.widget.Button;
@@ -27,9 +25,6 @@ public class ResetProgressDialog extends Dialog {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.dialog_reset_progress);
-        
-        // Make dialog background transparent
-        getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         
         setCancelable(true);
         setCanceledOnTouchOutside(true);
