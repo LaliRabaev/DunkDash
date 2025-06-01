@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,6 +20,7 @@ public class LoginActivity extends AppCompatActivity {
     private EditText etUsername, etPassword;
     private Button btnDone, btnSignup, btnDevLogin;
     private ImageButton btnTogglePassword;
+    private TextView forgotPasswordText;
     private boolean isPasswordVisible = false;
     private FirebaseAuth mAuth;
 
@@ -36,6 +38,7 @@ public class LoginActivity extends AppCompatActivity {
         btnSignup = findViewById(R.id.signupButton);
         btnTogglePassword = findViewById(R.id.togglePasswordVisibility);
         btnDevLogin = findViewById(R.id.devLoginButton);
+        forgotPasswordText = findViewById(R.id.forgotPasswordText);
         mAuth = FirebaseAuth.getInstance();
 
         // Setup password visibility toggle
@@ -66,6 +69,15 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(LoginActivity.this, SignupActivity.class);
+                startActivity(intent);
+            }
+        });
+
+        // Forgot password click listener
+        forgotPasswordText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(LoginActivity.this, ForgotPasswordActivity.class);
                 startActivity(intent);
             }
         });

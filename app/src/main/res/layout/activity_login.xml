@@ -73,20 +73,25 @@
     <!-- Password field with visibility toggle -->
     <RelativeLayout
         android:id="@+id/passwordLayout"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@id/usernameInput"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="16dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp">
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp">
 
         <EditText
             android:id="@+id/passwordInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Password"
+            android:textColorHint="@color/darkgrey"
             android:inputType="textPassword"
-            android:padding="12dp" />
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:paddingEnd="60dp" />
 
         <ImageButton
             android:id="@+id/togglePasswordVisibility"
@@ -100,18 +105,33 @@
 
     </RelativeLayout>
 
+    <!-- Forgot Password Link -->
+    <TextView
+        android:id="@+id/forgotPasswordText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Forgot Password?"
+        android:textColor="@color/orange"
+        android:textSize="14sp"
+        android:layout_marginTop="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintTop_toBottomOf="@id/passwordLayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="32dp" />
+
     <!-- Done Button -->
     <Button
         android:id="@+id/doneButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="Submit"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="24dp"
         android:backgroundTint="@color/orange"
         android:textColor="@color/white"
         android:minHeight="48dp"
         android:padding="12dp"
-        app:layout_constraintTop_toBottomOf="@id/passwordLayout"
+        app:layout_constraintTop_toBottomOf="@id/forgotPasswordText"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginStart="32dp"
