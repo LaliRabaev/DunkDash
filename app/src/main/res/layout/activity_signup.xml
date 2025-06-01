@@ -14,35 +14,35 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="24dp">
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="20dp">
 
         <!-- Logo Image -->
         <ImageView
             android:id="@+id/logoImage"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
+            android:layout_height="120dp"
             android:scaleType="fitCenter"
             android:contentDescription="@string/app_logo"
             android:src="@drawable/app_logo_for_login_page"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="12dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🏀 Join DunkDash!"
             android:textColor="#FFFFFF"
-            android:textSize="24sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:layout_gravity="center"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="6dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Create your account to start playing"
             android:textColor="#CCCCCC"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:layout_gravity="center" />
 
     </LinearLayout>
@@ -51,7 +51,8 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -65,29 +66,31 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:background="@drawable/leaderboard_normal_background"
-                android:padding="4dp"
-                android:layout_marginBottom="20dp">
+                android:padding="3dp"
+                android:layout_marginBottom="16dp">
 
                 <Button
                     android:id="@+id/loginButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="42dp"
                     android:layout_weight="1"
                     android:text="🔑 Login"
                     android:textColor="#CCCCCC"
                     android:backgroundTint="@android:color/transparent"
-                    android:textAllCaps="false" />
+                    android:textAllCaps="false"
+                    android:textSize="14sp" />
 
                 <Button
                     android:id="@+id/signupButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="42dp"
                     android:layout_weight="1"
                     android:text="✨ Sign Up"
                     android:textColor="#FFFFFF"
                     android:backgroundTint="#4A4A4A"
                     android:textAllCaps="false"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:textSize="14sp" />
 
             </LinearLayout>
 
@@ -97,30 +100,29 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/leaderboard_normal_background"
                 android:orientation="vertical"
-                android:padding="20dp"
-                android:layout_marginBottom="16dp">
+                android:padding="12dp"
+                android:layout_marginBottom="10dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="👤 Full Name"
                     android:textColor="#FFFFFF"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="8dp" />
 
                 <EditText
                     android:id="@+id/fullNameInput"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="42dp"
                     android:hint="Enter your full name"
                     android:textColorHint="#AAAAAA"
                     android:textColor="#FFFFFF"
                     android:inputType="textPersonName"
-                    android:minHeight="48dp"
-                    android:padding="12dp"
+                    android:padding="10dp"
                     android:background="@android:color/transparent"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
 
             </LinearLayout>
 
@@ -130,30 +132,29 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/leaderboard_normal_background"
                 android:orientation="vertical"
-                android:padding="20dp"
-                android:layout_marginBottom="16dp">
+                android:padding="12dp"
+                android:layout_marginBottom="10dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="📧 Email Address"
                     android:textColor="#FFFFFF"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="8dp" />
 
                 <EditText
                     android:id="@+id/usernameInput"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="42dp"
                     android:hint="Enter your email address"
                     android:textColorHint="#AAAAAA"
                     android:textColor="#FFFFFF"
                     android:inputType="textEmailAddress"
-                    android:minHeight="48dp"
-                    android:padding="12dp"
+                    android:padding="10dp"
                     android:background="@android:color/transparent"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
 
             </LinearLayout>
 
@@ -163,38 +164,37 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/leaderboard_normal_background"
                 android:orientation="vertical"
-                android:padding="20dp"
-                android:layout_marginBottom="16dp">
+                android:padding="12dp"
+                android:layout_marginBottom="10dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🔒 Password"
                     android:textColor="#FFFFFF"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="8dp" />
 
                 <EditText
                     android:id="@+id/passwordInput"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="42dp"
                     android:hint="Create a strong password"
                     android:textColorHint="#AAAAAA"
                     android:textColor="#FFFFFF"
                     android:inputType="textPassword"
-                    android:minHeight="48dp"
-                    android:padding="12dp"
+                    android:padding="10dp"
                     android:background="@android:color/transparent"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="💡 8+ chars, uppercase, lowercase, digit &amp; special character"
                     android:textColor="#CCCCCC"
-                    android:textSize="14sp"
-                    android:layout_marginTop="8dp" />
+                    android:textSize="12sp"
+                    android:layout_marginTop="6dp" />
 
             </LinearLayout>
 
@@ -204,30 +204,29 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/leaderboard_normal_background"
                 android:orientation="vertical"
-                android:padding="20dp"
-                android:layout_marginBottom="24dp">
+                android:padding="12dp"
+                android:layout_marginBottom="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🔒 Repeat Password"
                     android:textColor="#FFFFFF"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="8dp" />
 
                 <EditText
                     android:id="@+id/repeatpasswordInput"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="42dp"
                     android:hint="Repeat your password"
                     android:textColorHint="#AAAAAA"
                     android:textColor="#FFFFFF"
                     android:inputType="textPassword"
-                    android:minHeight="48dp"
-                    android:padding="12dp"
+                    android:padding="10dp"
                     android:background="@android:color/transparent"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
 
             </LinearLayout>
 
@@ -239,13 +238,13 @@
     <Button
         android:id="@+id/doneButton"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="50dp"
         android:text="🚀 Create Account"
         android:textAllCaps="false"
         android:textColor="#FFFFFF"
-        android:textSize="18sp"
+        android:textSize="16sp"
         android:textStyle="bold"
         android:background="@drawable/leaderboard_current_user_background"
-        android:layout_marginTop="16dp" />
+        android:layout_marginTop="12dp" />
 
 </LinearLayout>
