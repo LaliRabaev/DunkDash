@@ -42,6 +42,8 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         statusMessage = findViewById(R.id.statusMessage);
         mAuth = FirebaseAuth.getInstance();
+        
+        Log.d(TAG, "Firebase Auth initialized: " + (mAuth != null));
     }
 
     private void setupClickListeners() {
@@ -69,18 +71,19 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         showLoading(true);
         hideStatusMessage();
 
+        // Use simple sendPasswordResetEmail without ActionCodeSettings
         mAuth.sendPasswordResetEmail(email)
                 .addOnCompleteListener(task -> {
                     showLoading(false);
                     if (task.isSuccessful()) {
-                        Log.d(TAG, "Password reset email sent successfully");
-                        showSuccess("✅ Reset link sent! Please check your email inbox and spam folder.");
+                        Log.d(TAG, "Password reset email sent successfully to: " + email);
+                        showSuccess("✅ Reset link sent to " + email + "!\n\nPlease check:\n• Your email inbox\n• Spam/junk folder\n• Email may take a few minutes");
                         
                         // Clear the email field
                         etEmail.setText("");
                         
-                        // Optionally finish after a delay
-                        etEmail.postDelayed(() -> finish(), 3000);
+                        // Auto-close after 4 seconds
+                        etEmail.postDelayed(() -> finish(), 4000);
                         
                     } else {
                         Exception exception = task.getException();
@@ -90,6 +93,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
                         if (exception instanceof FirebaseAuthException) {
                             FirebaseAuthException firebaseException = (FirebaseAuthException) exception;
                             String errorCode = firebaseException.getErrorCode();
+                            Log.e(TAG, "Firebase Auth Error Code: " + errorCode);
                             
                             switch (errorCode) {
                                 case "ERROR_USER_NOT_FOUND":
@@ -99,17 +103,17 @@ public class ForgotPasswordActivity extends AppCompatActivity {
                                     errorMessage = "Invalid email address format";
                                     break;
                                 case "ERROR_TOO_MANY_REQUESTS":
-                                    errorMessage = "Too many requests. Please try again later";
+                                    errorMessage = "Too many requests. Please wait before trying again";
                                     break;
                                 default:
-                                    errorMessage = "Error: " + firebaseException.getMessage();
+                                    errorMessage = firebaseException.getMessage();
                                     break;
                             }
                         } else if (exception != null) {
                             errorMessage = exception.getMessage();
                         }
                         
-                        showError(errorMessage);
+                        showError("❌ " + errorMessage);
                     }
                 });
     }
@@ -121,7 +125,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         
         if (show) {
             btnReset.setText("🔄 Sending...");
-            btnReset.setAlpha(0.7f);
+            btnReset.setAlpha(0.6f);
         } else {
             btnReset.setText("🚀 Send Reset Link");
             btnReset.setAlpha(1.0f);
@@ -129,7 +133,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
     }
 
     private void showError(String message) {
-        statusMessage.setText("❌ " + message);
+        statusMessage.setText(message);
         statusMessage.setTextColor(0xFFFF5252); // Red
         statusMessage.setVisibility(View.VISIBLE);
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
@@ -140,7 +144,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         statusMessage.setText(message);
         statusMessage.setTextColor(0xFF4CAF50); // Green
         statusMessage.setVisibility(View.VISIBLE);
-        Toast.makeText(this, "Reset link sent! Check your email.", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "Reset email sent! Check your inbox.", Toast.LENGTH_LONG).show();
         Log.d(TAG, "Success: " + message);
     }
 
