@@ -95,27 +95,62 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
     private void initializeFirebase() {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        prefs = getSharedPreferences("DunkDashSettings", MODE_PRIVATE);
 
-        // Initialize Firebase Storage with proper error handling
+        // Initialize Firebase Storage with better error handling
         try {
             storage = FirebaseStorage.getInstance();
+            
+            // Check if storage bucket is configured
+            String bucketUrl = storage.getApp().getOptions().getStorageBucket();
+            if (bucketUrl == null || bucketUrl.isEmpty()) {
+                Log.e(TAG, "Firebase Storage bucket not configured");
+                Toast.makeText(this, "Profile pictures unavailable - Storage not configured", Toast.LENGTH_LONG).show();
+                disableProfilePictureFeature();
+                return;
+            }
+            
             storageRef = storage.getReference();
-            Log.d(TAG, "Firebase Storage initialized successfully");
-            Log.d(TAG, "Storage bucket: " + storage.getApp().getOptions().getStorageBucket());
+            Log.d(TAG, "Firebase Storage initialized successfully with bucket: " + bucketUrl);
+            
+            // Test storage connectivity
+            testStorageConnection();
+            
         } catch (Exception e) {
             Log.e(TAG, "Failed to initialize Firebase Storage", e);
-            Toast.makeText(this, "Storage not available. Profile pictures disabled.", Toast.LENGTH_LONG).show();
-            // Disable profile picture functionality
-            changePictureButton.setEnabled(false);
-            changePictureButton.setText("📸 Storage Unavailable");
+            Toast.makeText(this, "Profile pictures unavailable - Storage error", Toast.LENGTH_LONG).show();
+            disableProfilePictureFeature();
         }
-
-        prefs = getSharedPreferences("DunkDashSettings", MODE_PRIVATE);
 
         FirebaseUser user = mAuth.getCurrentUser();
         if (user != null) {
             userId = user.getUid();
         }
+    }
+
+    private void testStorageConnection() {
+        // Try to list files in root to test connectivity
+        storageRef.listAll()
+                .addOnSuccessListener(listResult -> {
+                    Log.d(TAG, "Storage connectivity test successful");
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Storage connectivity test failed", e);
+                    if (e.getMessage() != null && e.getMessage().contains("storage bucket")) {
+                        Toast.makeText(this, "❌ Firebase Storage not properly configured", Toast.LENGTH_LONG).show();
+                        disableProfilePictureFeature();
+                    }
+                });
+    }
+
+    private void disableProfilePictureFeature() {
+        if (changePictureButton != null) {
+            changePictureButton.setEnabled(false);
+            changePictureButton.setText("📸 Not Available");
+            changePictureButton.setAlpha(0.5f);
+        }
+        storage = null;
+        storageRef = null;
     }
 
     private void initializeActivityLaunchers() {
@@ -175,8 +210,8 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
     }
 
     private void showImagePickerDialog() {
-        if (storage == null) {
-            Toast.makeText(this, "Storage not available. Cannot upload images.", Toast.LENGTH_SHORT).show();
+        if (storage == null || storageRef == null) {
+            Toast.makeText(this, "❌ Profile pictures not available.\n\nFirebase Storage needs to be configured in your Firebase project.", Toast.LENGTH_LONG).show();
             return;
         }
         ImagePickerDialog dialog = new ImagePickerDialog(this, this);
@@ -252,7 +287,7 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
         }
 
         if (storage == null || storageRef == null) {
-            Toast.makeText(this, "Storage not available", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "❌ Storage not available. Please check Firebase configuration.", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -264,18 +299,23 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
             Bitmap resizedBitmap = resizeBitmap(bitmap, 300, 300);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, baos);
             byte[] imageData = baos.toByteArray();
 
-            // Use a simpler path structure and add timestamp to avoid conflicts
+            // Create a unique filename with timestamp
             String fileName = "profile_" + userId + "_" + System.currentTimeMillis() + ".jpg";
-            StorageReference profileImageRef = storageRef.child("profile_pictures").child(fileName);
+            
+            // Try different storage paths to see which works
+            StorageReference profileImageRef = storageRef.child("profile_pictures/" + fileName);
 
-            Log.d(TAG, "Uploading to: " + profileImageRef.getPath());
+            Log.d(TAG, "Attempting upload to: " + profileImageRef.getPath());
+            Log.d(TAG, "Storage bucket URL: " + storage.getApp().getOptions().getStorageBucket());
+            Log.d(TAG, "Image data size: " + imageData.length + " bytes");
 
             profileImageRef.putBytes(imageData)
                     .addOnSuccessListener(taskSnapshot -> {
-                        Log.d(TAG, "Image uploaded successfully");
+                        Log.d(TAG, "Image uploaded successfully to: " + taskSnapshot.getMetadata().getPath());
+                        
                         profileImageRef.getDownloadUrl()
                                 .addOnSuccessListener(downloadUri -> {
                                     Log.d(TAG, "Download URL obtained: " + downloadUri.toString());
@@ -283,23 +323,21 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
                                 })
                                 .addOnFailureListener(e -> {
                                     Log.e(TAG, "Failed to get download URL", e);
-                                    Toast.makeText(this, "❌ Failed to get image URL: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                    Toast.makeText(this, "❌ Upload succeeded but failed to get URL: " + e.getMessage(), Toast.LENGTH_LONG).show();
                                     resetUploadButton();
                                 });
                     })
                     .addOnFailureListener(e -> {
                         Log.e(TAG, "Failed to upload image", e);
-                        String errorMsg = e.getMessage();
-                        if (errorMsg != null && errorMsg.contains("storage bucket")) {
-                            Toast.makeText(this, "❌ Storage not configured. Please check Firebase setup.", Toast.LENGTH_LONG).show();
-                        } else {
-                            Toast.makeText(this, "❌ Upload failed: " + errorMsg, Toast.LENGTH_LONG).show();
-                        }
+                        handleUploadError(e);
                         resetUploadButton();
                     })
                     .addOnProgressListener(taskSnapshot -> {
                         double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
-                        Log.d(TAG, "Upload progress: " + progress + "%");
+                        Log.d(TAG, "Upload progress: " + (int)progress + "%");
+                        
+                        // Update button with progress
+                        changePictureButton.setText("📤 " + (int)progress + "%");
                     });
 
         } catch (IOException e) {
@@ -310,6 +348,26 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
             Log.e(TAG, "Unexpected error during upload", e);
             Toast.makeText(this, "❌ Unexpected error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             resetUploadButton();
+        }
+    }
+
+    private void handleUploadError(Exception e) {
+        String errorMessage = e.getMessage();
+        Log.e(TAG, "Upload error details: " + errorMessage);
+        
+        if (errorMessage != null) {
+            if (errorMessage.contains("storage bucket") || errorMessage.contains("Not Found")) {
+                Toast.makeText(this, "❌ Firebase Storage not configured.\n\nPlease enable Storage in your Firebase Console:\n1. Go to Firebase Console\n2. Click Storage\n3. Click 'Get started'\n4. Set up storage rules", Toast.LENGTH_LONG).show();
+                disableProfilePictureFeature();
+            } else if (errorMessage.contains("permission") || errorMessage.contains("unauthorized")) {
+                Toast.makeText(this, "❌ Permission denied.\n\nCheck Firebase Storage security rules.", Toast.LENGTH_LONG).show();
+            } else if (errorMessage.contains("network") || errorMessage.contains("timeout")) {
+                Toast.makeText(this, "❌ Network error. Please check your internet connection.", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "❌ Upload failed: " + errorMessage, Toast.LENGTH_LONG).show();
+            }
+        } else {
+            Toast.makeText(this, "❌ Upload failed with unknown error", Toast.LENGTH_SHORT).show();
         }
     }
 
