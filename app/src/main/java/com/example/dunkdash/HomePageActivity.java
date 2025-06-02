@@ -22,7 +22,7 @@ public class HomePageActivity extends AppCompatActivity {
 
     private boolean gameStarted = false;
     private ImageView homeBackground, playerBasketball;
-    private TextView greetingText, currentModeTextView; // Add mode display
+    private TextView greetingText, currentModeTextView;
     private FirebaseFirestore db;
     private FirebaseUser currentUser;
 
@@ -127,7 +127,6 @@ public class HomePageActivity extends AppCompatActivity {
     private void loadUserInfo() {
         if (currentUser == null) {
             greetingText.setText("Hello, Guest!");
-            updateCurrentModeDisplay(1); // Default mode for guests
             return;
         }
 
@@ -137,7 +136,6 @@ public class HomePageActivity extends AppCompatActivity {
                 .addOnSuccessListener(userDoc -> {
                     if (!userDoc.exists()) {
                         greetingText.setText("Hello, Player!");
-                        updateCurrentModeDisplay(1); // Default mode
                         return;
                     }
 
@@ -162,19 +160,33 @@ public class HomePageActivity extends AppCompatActivity {
 
                     Log.d(TAG, "User info loaded - Nickname: " + nickname);
 
-                    // Load and display current game mode - use correct field name
-                    Long currentMode = userDoc.getLong("current_game_mode"); // Fixed field name
-                    if (currentMode != null) {
-                        updateCurrentModeDisplay(currentMode.intValue());
-                    } else {
-                        updateCurrentModeDisplay(1); // Default mode
-                    }
+                    // Load user stats (max score and total games)
+                    loadUserStats(userDoc);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load user info", e);
                     greetingText.setText("Hello, Player!");
-                    updateCurrentModeDisplay(1); // Default mode on failure
                 });
+    }
+
+    private void loadUserStats(DocumentSnapshot userDoc) {
+        // Load max score
+        Long maxScore = userDoc.getLong("max_score");
+        if (maxScore != null) {
+            TextView maxScoreView = findViewById(R.id.max_score_value);
+            if (maxScoreView != null) {
+                maxScoreView.setText(String.valueOf(maxScore));
+            }
+        }
+
+        // Load total games
+        Long totalGames = userDoc.getLong("total_games");
+        if (totalGames != null) {
+            TextView totalGamesView = findViewById(R.id.total_games_value);
+            if (totalGamesView != null) {
+                totalGamesView.setText(String.valueOf(totalGames));
+            }
+        }
     }
 
     private String getTimeBasedGreeting() {
@@ -230,11 +242,8 @@ public class HomePageActivity extends AppCompatActivity {
     }
 
     private void updateCurrentModeDisplay(int mode) {
-        if (currentModeTextView != null) {
-            String modeText = getModeDisplayText(mode);
-            currentModeTextView.setText("Current Mode: " + modeText);
-            Log.d(TAG, "Updated mode display: " + modeText);
-        }
+        // Mode display removed from home page - method kept for compatibility
+        Log.d(TAG, "Current mode: " + getModeDisplayText(mode) + " (not displayed on home page)");
     }
 
     private String getModeDisplayText(int mode) {
