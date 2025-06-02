@@ -2,8 +2,11 @@ package com.example.dunkdash;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
+import android.media.ToneGenerator;
+import android.media.AudioManager;
 import android.util.Log;
 
 import java.util.HashMap;
@@ -18,6 +21,7 @@ public class AudioManager {
     private MediaPlayer backgroundMusicPlayer;
     private SoundPool soundPool;
     private Map<String, Integer> soundEffects;
+    private ToneGenerator toneGenerator;
     
     // Sound effect IDs
     public static final String SOUND_SHOOT = "shoot";
@@ -31,6 +35,7 @@ public class AudioManager {
         this.prefs = context.getSharedPreferences("DunkDashSettings", Context.MODE_PRIVATE);
         this.soundEffects = new HashMap<>();
         initializeSoundPool();
+        initializeToneGenerator();
     }
     
     public static synchronized AudioManager getInstance(Context context) {
@@ -40,22 +45,60 @@ public class AudioManager {
         return instance;
     }
     
-    private void initializeSoundPool() {
-        SoundPool.Builder builder = new SoundPool.Builder();
-        builder.setMaxStreams(5);
-        soundPool = builder.build();
-        
-        // Load sound effects (you'll need to add these audio files to res/raw/)
-        // For now, using system sounds as placeholders
+    private void initializeToneGenerator() {
         try {
-            soundEffects.put(SOUND_SHOOT, soundPool.load(context, R.raw.shoot_sound, 1));
-            soundEffects.put(SOUND_SCORE, soundPool.load(context, R.raw.score_sound, 1));
-            soundEffects.put(SOUND_MISS, soundPool.load(context, R.raw.miss_sound, 1));
-            soundEffects.put(SOUND_BUTTON_CLICK, soundPool.load(context, R.raw.button_click, 1));
-            soundEffects.put(SOUND_GAME_OVER, soundPool.load(context, R.raw.game_over_sound, 1));
+            toneGenerator = new ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 50);
         } catch (Exception e) {
-            Log.e(TAG, "Error loading sound effects", e);
+            Log.e(TAG, "Error initializing tone generator", e);
         }
+    }
+    
+    private void initializeSoundPool() {
+        AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+                
+        soundPool = new SoundPool.Builder()
+                .setMaxStreams(5)
+                .setAudioAttributes(audioAttributes)
+                .build();
+        
+        // Try to load sound effects, use fallback if files don't exist
+        loadSoundEffects();
+    }
+    
+    private void loadSoundEffects() {
+        try {
+            // Try to load from raw resources
+            int shootId = loadSoundResource("shoot_sound");
+            int scoreId = loadSoundResource("score_sound");
+            int missId = loadSoundResource("miss_sound");
+            int buttonId = loadSoundResource("button_click");
+            int gameOverId = loadSoundResource("game_over_sound");
+            
+            soundEffects.put(SOUND_SHOOT, shootId);
+            soundEffects.put(SOUND_SCORE, scoreId);
+            soundEffects.put(SOUND_MISS, missId);
+            soundEffects.put(SOUND_BUTTON_CLICK, buttonId);
+            soundEffects.put(SOUND_GAME_OVER, gameOverId);
+            
+            Log.d(TAG, "Sound effects loaded successfully");
+        } catch (Exception e) {
+            Log.w(TAG, "Could not load sound files, using tone fallbacks", e);
+        }
+    }
+    
+    private int loadSoundResource(String fileName) {
+        try {
+            int resId = context.getResources().getIdentifier(fileName, "raw", context.getPackageName());
+            if (resId != 0) {
+                return soundPool.load(context, resId, 1);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Could not load sound: " + fileName, e);
+        }
+        return -1; // Return -1 if sound couldn't be loaded
     }
     
     public void startBackgroundMusic() {
@@ -63,10 +106,17 @@ public class AudioManager {
         
         try {
             if (backgroundMusicPlayer == null) {
-                backgroundMusicPlayer = MediaPlayer.create(context, R.raw.background_music);
-                if (backgroundMusicPlayer != null) {
-                    backgroundMusicPlayer.setLooping(true);
-                    backgroundMusicPlayer.setVolume(0.3f, 0.3f); // Lower volume for background
+                // Try to load background music
+                int resId = context.getResources().getIdentifier("background_music", "raw", context.getPackageName());
+                if (resId != 0) {
+                    backgroundMusicPlayer = MediaPlayer.create(context, resId);
+                    if (backgroundMusicPlayer != null) {
+                        backgroundMusicPlayer.setLooping(true);
+                        backgroundMusicPlayer.setVolume(0.3f, 0.3f);
+                    }
+                } else {
+                    Log.w(TAG, "Background music file not found, skipping");
+                    return;
                 }
             }
             
@@ -101,32 +151,36 @@ public class AudioManager {
         if (!isSoundEffectsEnabled()) return;
         
         Integer soundId = soundEffects.get(soundType);
-        if (soundId != null && soundPool != null) {
+        if (soundId != null && soundId != -1 && soundPool != null) {
+            // Play loaded sound effect
             soundPool.play(soundId, 0.7f, 0.7f, 1, 0, 1.0f);
-        }
-    }
-    
-    public void updateMusicSetting(boolean enabled) {
-        if (enabled) {
-            startBackgroundMusic();
+            Log.d(TAG, "Played sound effect: " + soundType);
         } else {
-            pauseBackgroundMusic();
+            // Fallback to tone generator
+            playToneFallback(soundType);
         }
     }
     
-    private boolean isMusicEnabled() {
-        return prefs.getBoolean("background_music", true);
-    }
-    
-    private boolean isSoundEffectsEnabled() {
-        return prefs.getBoolean("sound_effects", true);
-    }
-    
-    public void cleanup() {
-        stopBackgroundMusic();
-        if (soundPool != null) {
-            soundPool.release();
-            soundPool = null;
-        }
-    }
-}
+    private void playToneFallback(String soundType) {
+        if (toneGenerator == null) return;
+        
+        try {
+            switch (soundType) {
+                case SOUND_SHOOT:
+                    toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 100);
+                    break;
+                case SOUND_SCORE:
+                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200);
+                    break;
+                case SOUND_MISS:
+                    toneGenerator.startTone(ToneGenerator.TONE_PROP_NACK, 150);
+                    break;
+                case SOUND_BUTTON_CLICK:
+                    toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2, 50);
+                    break;
+                case SOUND_GAME_OVER:
+                    toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 300);
+                    break;
+            }
+            Log.d(TAG, "Played tone fallback for: " + soundType);
+        } catch (Exception e) {
