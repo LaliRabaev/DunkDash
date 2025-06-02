@@ -104,11 +104,11 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
 
             Intent musicIntent = new Intent(this, MusicService.class);
             if (isChecked) {
-                musicIntent.setAction("START_MUSIC");
+                musicIntent.setAction(MusicService.ACTION_START_MUSIC);
                 startService(musicIntent);
                 Toast.makeText(this, "🎵 Background music enabled", Toast.LENGTH_SHORT).show();
             } else {
-                musicIntent.setAction("PAUSE_MUSIC");
+                musicIntent.setAction(MusicService.ACTION_PAUSE_MUSIC);
                 startService(musicIntent);
                 Toast.makeText(this, "🔇 Background music disabled", Toast.LENGTH_SHORT).show();
             }
@@ -271,8 +271,15 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
     }
 
     private void performLogout() {
+        // Stop background music before logout
+        Intent musicIntent = new Intent(this, MusicService.class);
+        musicIntent.setAction(MusicService.ACTION_STOP_MUSIC);
+        startService(musicIntent);
+        
+        // Clear preferences
         prefs.edit().clear().apply();
 
+        // Sign out from Firebase
         mAuth.signOut();
 
         Toast.makeText(this, "👋 Logged out successfully", Toast.LENGTH_SHORT).show();

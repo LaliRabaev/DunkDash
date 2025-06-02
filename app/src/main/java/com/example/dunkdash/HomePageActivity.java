@@ -1,6 +1,7 @@
 package com.example.dunkdash;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -25,11 +26,15 @@ public class HomePageActivity extends AppCompatActivity {
     private TextView greetingText, currentModeTextView;
     private FirebaseFirestore db;
     private FirebaseUser currentUser;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_page);
+
+        // Initialize SharedPreferences
+        prefs = getSharedPreferences("DunkDashSettings", MODE_PRIVATE);
 
         // 1) Bind dynamic ImageViews
         homeBackground   = findViewById(R.id.home_background);
@@ -47,7 +52,10 @@ public class HomePageActivity extends AppCompatActivity {
         loadUserSelections();
         loadUserInfo();
 
-        // 5) First tap anywhere → start game
+        // 5) Start background music automatically
+        startBackgroundMusic();
+
+        // 6) First tap anywhere → start game
         View root = findViewById(R.id.rootLayout);
         root.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN && !gameStarted) {
@@ -58,7 +66,7 @@ public class HomePageActivity extends AppCompatActivity {
             return false;
         });
 
-        // 6) Left column icons → open selectors
+        // 7) Left column icons → open selectors
         findViewById(R.id.ball_icon).setOnClickListener(v ->
                 startActivity(new Intent(this, SelectBasketballsActivity.class))
         );
@@ -69,7 +77,7 @@ public class HomePageActivity extends AppCompatActivity {
                 startActivity(new Intent(this, SelectModesActivity.class))
         );
         
-        // 7) Right column icons
+        // 8) Right column icons
         findViewById(R.id.cup_icon).setOnClickListener(v -> {
             Log.d(TAG, "Cup icon clicked!");
             startActivity(new Intent(this, UserProfileActivity.class));
@@ -92,6 +100,28 @@ public class HomePageActivity extends AppCompatActivity {
         if (currentUser == null) return;
         loadUserSelections(); // Reload preferences when returning
         loadUserInfo(); // Reload user stats when returning
+        
+        // Restart music if enabled
+        startBackgroundMusic();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Don't stop music when pausing - let it continue in background
+    }
+
+    private void startBackgroundMusic() {
+        // Check if music is enabled in settings
+        boolean musicEnabled = prefs.getBoolean("background_music", true);
+        if (musicEnabled) {
+            Intent musicIntent = new Intent(this, MusicService.class);
+            musicIntent.setAction(MusicService.ACTION_START_MUSIC);
+            startService(musicIntent);
+            Log.d(TAG, "Started background music service");
+        } else {
+            Log.d(TAG, "Background music disabled in settings");
+        }
     }
 
     private void loadUserSelections() {

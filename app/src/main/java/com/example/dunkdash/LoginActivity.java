@@ -1,8 +1,10 @@
 package com.example.dunkdash;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.method.PasswordTransformationMethod;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -113,12 +115,29 @@ public class LoginActivity extends AppCompatActivity {
                     if (task.isSuccessful()) {
                         FirebaseUser user = mAuth.getCurrentUser();
                         Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
+                        
+                        // Start background music after successful login
+                        startBackgroundMusicAfterLogin();
+                        
                         Intent movingtohomepage = new Intent(LoginActivity.this, HomePageActivity.class);
                         startActivity(movingtohomepage);
                     } else {
                         Toast.makeText(LoginActivity.this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
+    }
+
+    private void startBackgroundMusicAfterLogin() {
+        // Check if music is enabled in default settings
+        SharedPreferences prefs = getSharedPreferences("DunkDashSettings", MODE_PRIVATE);
+        boolean musicEnabled = prefs.getBoolean("background_music", true); // Default to true
+        
+        if (musicEnabled) {
+            Intent musicIntent = new Intent(this, MusicService.class);
+            musicIntent.setAction(MusicService.ACTION_START_MUSIC);
+            startService(musicIntent);
+            Log.d("LoginActivity", "Started background music after login");
+        }
     }
 
     private void performDevLogin() {
