@@ -34,6 +34,8 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
     private SharedPreferences prefs;
     private String userId;
 
+    private AudioManager audioManager;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,6 +43,7 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
 
         initializeViews();
         initializeFirebase();
+        initializeAudio();
         loadSettings();
         loadUserData();
         setupClickListeners();
@@ -70,20 +73,43 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
         }
     }
 
+    private void initializeAudio() {
+        audioManager = AudioManager.getInstance(this);
+    }
+
     private void setupClickListeners() {
-        backButton.setOnClickListener(v -> finish());
+        backButton.setOnClickListener(v -> {
+            audioManager.playSound(AudioManager.SOUND_BUTTON_CLICK);
+            finish();
+        });
 
-        saveNicknameButton.setOnClickListener(v -> saveNickname());
+        saveNicknameButton.setOnClickListener(v -> {
+            audioManager.playSound(AudioManager.SOUND_BUTTON_CLICK);
+            saveNickname();
+        });
 
-        resetProgressButton.setOnClickListener(v -> showResetDialog());
+        resetProgressButton.setOnClickListener(v -> {
+            audioManager.playSound(AudioManager.SOUND_BUTTON_CLICK);
+            showResetDialog();
+        });
 
-        logoutButton.setOnClickListener(v -> showLogoutDialog());
+        logoutButton.setOnClickListener(v -> {
+            audioManager.playSound(AudioManager.SOUND_BUTTON_CLICK);
+            showLogoutDialog();
+        });
 
         backgroundMusicSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             saveSetting("background_music", isChecked);
+            audioManager.updateMusicSetting(isChecked);
+
+            Intent musicIntent = new Intent(this, MusicService.class);
             if (isChecked) {
+                musicIntent.setAction("START_MUSIC");
+                startService(musicIntent);
                 Toast.makeText(this, "🎵 Background music enabled", Toast.LENGTH_SHORT).show();
             } else {
+                musicIntent.setAction("PAUSE_MUSIC");
+                startService(musicIntent);
                 Toast.makeText(this, "🔇 Background music disabled", Toast.LENGTH_SHORT).show();
             }
         });
@@ -91,6 +117,7 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
         soundEffectsSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             saveSetting("sound_effects", isChecked);
             if (isChecked) {
+                audioManager.playSound(AudioManager.SOUND_BUTTON_CLICK);
                 Toast.makeText(this, "🔉 Sound effects enabled", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, "🔇 Sound effects disabled", Toast.LENGTH_SHORT).show();
