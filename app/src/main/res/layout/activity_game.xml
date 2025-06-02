@@ -16,45 +16,6 @@
         android:background="#DDDDDD"
         android:src="@null" />
 
-    <!-- Game mode display - positioned lower and better -->
-    <TextView
-        android:id="@+id/game_mode_text_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:background="#AA000000"
-        android:padding="12dp"
-        android:text="😊 Easy Mode"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:elevation="8dp"
-        android:shadowColor="#000000"
-        android:shadowDx="2"
-        android:shadowDy="2"
-        android:shadowRadius="4" />
-
-    <!-- Centered score display -->
-    <TextView
-        android:id="@+id/score_text_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="70dp"
-        android:background="#AA000000"
-        android:padding="12dp"
-        android:text="Score: 0"
-        android:textColor="#FFFFFF"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:elevation="8dp"
-        android:shadowColor="#000000"
-        android:shadowDx="2"
-        android:shadowDy="2"
-        android:shadowRadius="4" />
-
     <!-- Top barrier with 7 cones -->
     <LinearLayout
         android:id="@+id/top_barrier_container"
@@ -120,6 +81,46 @@
             android:scaleType="fitXY"
             android:src="@drawable/game_cone" />
     </LinearLayout>
+
+    <!-- Game mode display - positioned below the top barrier -->
+    <TextView
+        android:id="@+id/game_mode_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/top_barrier_container"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="10dp"
+        android:background="#AA000000"
+        android:padding="10dp"
+        android:text="😊 Easy Mode"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:elevation="8dp"
+        android:shadowColor="#000000"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="4" />
+
+    <!-- Centered score display - positioned below game mode -->
+    <TextView
+        android:id="@+id/score_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/game_mode_text_view"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:background="#AA000000"
+        android:padding="12dp"
+        android:text="Score: 0"
+        android:textColor="#FFFFFF"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:elevation="8dp"
+        android:shadowColor="#000000"
+        android:shadowDx="2"
+        android:shadowDy="2"
+        android:shadowRadius="4" />
 
     <!-- Bottom barrier with 7 cones -->
     <LinearLayout

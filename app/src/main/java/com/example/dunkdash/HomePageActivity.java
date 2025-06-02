@@ -159,34 +159,11 @@ public class HomePageActivity extends AppCompatActivity {
                     greetingText.setText(greeting);
 
                     Log.d(TAG, "User info loaded - Nickname: " + nickname);
-
-                    // Load user stats (max score and total games)
-                    loadUserStats(userDoc);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load user info", e);
                     greetingText.setText("Hello, Player!");
                 });
-    }
-
-    private void loadUserStats(DocumentSnapshot userDoc) {
-        // Load max score
-        Long maxScore = userDoc.getLong("max_score");
-        if (maxScore != null) {
-            TextView maxScoreView = findViewById(R.id.max_score_value);
-            if (maxScoreView != null) {
-                maxScoreView.setText(String.valueOf(maxScore));
-            }
-        }
-
-        // Load total games
-        Long totalGames = userDoc.getLong("total_games");
-        if (totalGames != null) {
-            TextView totalGamesView = findViewById(R.id.total_games_value);
-            if (totalGamesView != null) {
-                totalGamesView.setText(String.valueOf(totalGames));
-            }
-        }
     }
 
     private String getTimeBasedGreeting() {
