@@ -21,7 +21,7 @@ import com.google.firebase.firestore.QuerySnapshot;
 public class HomePageActivity extends AppCompatActivity {
     private static final String TAG = "HomePageActivity";
 
-    private boolean gameStarted = false;
+    private boolean gameStarted = false; // Prevent multiple game starts from rapid tapping
     private ImageView homeBackground, playerBasketball;
     private TextView greetingText, currentModeTextView;
     private FirebaseFirestore db;
@@ -33,29 +33,28 @@ public class HomePageActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_page);
 
-        // Initialize SharedPreferences
         prefs = getSharedPreferences("DunkDashSettings", MODE_PRIVATE);
 
-        // 1) Bind dynamic ImageViews
+        // Bind the dynamic UI elements that change based on user selections
         homeBackground   = findViewById(R.id.home_background);
         playerBasketball = findViewById(R.id.player_basketball);
 
-        // 2) Bind user info TextViews
+        // User info display
         greetingText = findViewById(R.id.greeting_text);
-        currentModeTextView = findViewById(R.id.current_mode_text_view); // Bind mode display
+        currentModeTextView = findViewById(R.id.current_mode_text_view);
 
-        // 3) Init Firebase
+        // Firebase setup
         db = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
-        // 4) Load & apply saved selections and user info
+        // Load user's selected basketball, background, etc.
         loadUserSelections();
         loadUserInfo();
 
-        // 5) Start background music automatically
+        // Start music right away if enabled - creates nice atmosphere
         startBackgroundMusic();
 
-        // 6) First tap anywhere → start game
+        // Tap anywhere to start game - simple and intuitive
         View root = findViewById(R.id.rootLayout);
         root.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN && !gameStarted) {
@@ -66,7 +65,7 @@ public class HomePageActivity extends AppCompatActivity {
             return false;
         });
 
-        // 7) Left column icons → open selectors
+        // Left column icons - customization options
         findViewById(R.id.ball_icon).setOnClickListener(v ->
                 startActivity(new Intent(this, SelectBasketballsActivity.class))
         );
@@ -77,7 +76,7 @@ public class HomePageActivity extends AppCompatActivity {
                 startActivity(new Intent(this, SelectModesActivity.class))
         );
         
-        // 8) Right column icons
+        // Right column icons - user features
         findViewById(R.id.cup_icon).setOnClickListener(v -> {
             Log.d(TAG, "Cup icon clicked!");
             startActivity(new Intent(this, UserProfileActivity.class));
@@ -95,24 +94,26 @@ public class HomePageActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Reset game started flag when returning to home
+        // Reset game flag when user comes back - allows starting new game
         gameStarted = false;
         if (currentUser == null) return;
-        loadUserSelections(); // Reload preferences when returning
-        loadUserInfo(); // Reload user stats when returning
         
-        // Restart music if enabled
+        // Reload everything in case user changed settings
+        loadUserSelections();
+        loadUserInfo();
+        
+        // Restart music if they have it enabled
         startBackgroundMusic();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        // Don't stop music when pausing - let it continue in background
+        // Don't stop music here - let it continue playing in background
     }
 
     private void startBackgroundMusic() {
-        // Check if music is enabled in settings
+        // Respect user's music preference
         boolean musicEnabled = prefs.getBoolean("background_music", true);
         if (musicEnabled) {
             Intent musicIntent = new Intent(this, MusicService.class);
@@ -127,6 +128,8 @@ public class HomePageActivity extends AppCompatActivity {
     private void loadUserSelections() {
         if (currentUser == null) return;
         String uid = currentUser.getUid();
+        
+        // Get user's current selections from Firebase
         db.collection("users").document(uid)
                 .get()
                 .addOnSuccessListener(userDoc -> {
@@ -134,7 +137,7 @@ public class HomePageActivity extends AppCompatActivity {
                     Long bgId   = userDoc.getLong("current_background");
                     Long ballId = userDoc.getLong("current_basketball");
 
-                    // Background lookup
+                    // Look up actual background image and apply it
                     if (bgId != null) {
                         db.collection("backgrounds")
                                 .whereEqualTo("id", bgId)
@@ -143,7 +146,7 @@ public class HomePageActivity extends AppCompatActivity {
                                 .addOnSuccessListener(this::applyBackground);
                     }
 
-                    // Basketball lookup
+                    // Same for basketball
                     if (ballId != null) {
                         db.collection("basketballs")
                                 .whereEqualTo("id", ballId)
@@ -169,7 +172,7 @@ public class HomePageActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Get user nickname or fallback to email/default
+                    // Try to get a nice display name with fallbacks
                     String nickname = userDoc.getString("nickname");
                     if (nickname == null || nickname.trim().isEmpty()) {
                         nickname = userDoc.getString("name");
@@ -177,14 +180,14 @@ public class HomePageActivity extends AppCompatActivity {
                     if (nickname == null || nickname.trim().isEmpty()) {
                         String email = currentUser.getEmail();
                         if (email != null && !email.isEmpty()) {
-                            // Use part before @ as nickname
+                            // Use part before @ as nickname - better than showing full email
                             nickname = email.split("@")[0];
                         } else {
                             nickname = "Player";
                         }
                     }
 
-                    // Set greeting with time-based message
+                    // Add time-based greeting for personal touch
                     String greeting = getTimeBasedGreeting() + ", " + nickname + "!";
                     greetingText.setText(greeting);
 
@@ -192,10 +195,11 @@ public class HomePageActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load user info", e);
-                    greetingText.setText("Hello, Player!");
+                    greetingText.setText("Hello, Player!"); // Safe fallback
                 });
     }
 
+    // Add some personality with time-based greetings
     private String getTimeBasedGreeting() {
         java.util.Calendar calendar = java.util.Calendar.getInstance();
         int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
@@ -268,7 +272,8 @@ public class HomePageActivity extends AppCompatActivity {
         }
     }
 
-    /** Strips "drawable/" prefix and file extension, then resolves R.drawable.name */
+    // Convert Firebase image path to actual Android resource
+    // This took some debugging to get right!
     private int getResIdFromPath(String path) {
         if (path == null || path.trim().isEmpty()) {
             Log.w(TAG, "Empty or null path provided");
@@ -276,11 +281,13 @@ public class HomePageActivity extends AppCompatActivity {
         }
         String name = path.trim();
         Log.d(TAG, "Original path: " + name);
-        // Remove drawable/ prefix if present
+        
+        // Strip drawable/ prefix if it exists
         if (name.startsWith("drawable/")) {
             name = name.substring("drawable/".length());
         }
-        // Remove any file extension
+        
+        // Remove file extension if present
         int lastDot = name.lastIndexOf('.');
         if (lastDot > 0) {
             name = name.substring(0, lastDot);
@@ -288,6 +295,7 @@ public class HomePageActivity extends AppCompatActivity {
         
         Log.d(TAG, "Processed resource name: " + name);
         
+        // Look up the actual resource ID
         int resId = getResources().getIdentifier(name, "drawable", getPackageName());
         if (resId == 0) {
             Log.w(TAG, "Resource not found for name: " + name + " in package: " + getPackageName());
@@ -296,11 +304,11 @@ public class HomePageActivity extends AppCompatActivity {
     }
 
     private void startGame() {
-        // Clear any previous game state flags
+        // Clear any leftover game state and start fresh
         Intent intent = new Intent(this, GameActivity.class);
         intent.removeExtra("score");
         intent.removeExtra("continue");
         startActivity(intent);
-        // Don't finish() here - let user return to home
+        // Don't finish() - let user come back to home easily
     }
 }

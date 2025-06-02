@@ -22,7 +22,7 @@ import java.util.List;
 
 public class LeaderboardActivity extends AppCompatActivity {
     private static final String TAG = "LeaderboardActivity";
-    private static final int TOP_PLAYERS_LIMIT = 100; // Increased from 50 to 100
+    private static final int TOP_PLAYERS_LIMIT = 100; // Show top 100 players - enough for most communities
 
     private RecyclerView leaderboardRecyclerView;
     private LeaderboardAdapter adapter;
@@ -41,13 +41,14 @@ public class LeaderboardActivity extends AppCompatActivity {
         initViews();
         setupRecyclerView();
 
-        // Check authentication before loading leaderboard
+        // Make sure user is logged in before showing leaderboard
         auth = FirebaseAuth.getInstance();
         currentUser = auth.getCurrentUser();
 
         if (currentUser != null) {
             loadLeaderboard();
         } else {
+            // Not logged in - show helpful message instead of empty screen
             showEmptyState(true);
             emptyStateText.setText("Please log in to view leaderboard");
         }
@@ -89,6 +90,8 @@ public class LeaderboardActivity extends AppCompatActivity {
         Log.d(TAG, "Loading leaderboard for current user ID: " + currentUserId);
         showLoading(true);
 
+        // Query Firebase for top players sorted by max score
+        // Using descending order so highest scores come first
         db.collection("users")
                 .orderBy("max_score", Query.Direction.DESCENDING)
                 .limit(TOP_PLAYERS_LIMIT)
@@ -99,24 +102,27 @@ public class LeaderboardActivity extends AppCompatActivity {
                     int rank = 1;
                     boolean foundCurrentUser = false;
 
+                    // Process each user document from Firebase
                     for (QueryDocumentSnapshot doc : querySnapshot) {
                         Long maxScore = doc.getLong("max_score");
                         Long totalGames = doc.getLong("total_games");
 
-                        // Skip users with no max score
+                        // Skip users who haven't played any games yet
                         if (maxScore == null || maxScore == 0) continue;
 
+                        // Try to get a nice display name - fallback chain for better UX
                         String nickname = doc.getString("nickname");
                         if (nickname == null || nickname.trim().isEmpty()) {
                             nickname = doc.getString("name");
                         }
                         if (nickname == null || nickname.trim().isEmpty()) {
-                            nickname = "Anonymous Player";
+                            nickname = "Anonymous Player"; // Better than showing null or empty
                         }
 
                         String userId = doc.getId();
                         Log.d(TAG, "Processing player: " + nickname + " with ID: " + userId + " (current: " + currentUserId + ")");
                         
+                        // Keep track if we found the current user in the top 100
                         if (userId.equals(currentUserId)) {
                             foundCurrentUser = true;
                             Log.d(TAG, "Found current user in leaderboard at rank " + rank);
@@ -135,7 +141,7 @@ public class LeaderboardActivity extends AppCompatActivity {
 
                     Log.d(TAG, "Current user found in leaderboard: " + foundCurrentUser);
                     
-                    // Update adapter with current user ID again to ensure it's set
+                    // Make sure adapter knows who the current user is
                     adapter.setCurrentUserId(currentUserId);
                     
                     showLoading(false);
@@ -152,12 +158,13 @@ public class LeaderboardActivity extends AppCompatActivity {
                     Log.e(TAG, "Failed to load leaderboard: " + e.getClass().getSimpleName() + " - " + e.getMessage(), e);
                     showLoading(false);
 
-                    // Check if it's a permission error
+                    // Check for common Firebase permission issues
                     if (e.getMessage() != null && e.getMessage().contains("PERMISSION_DENIED")) {
                         showEmptyState(true);
                         emptyStateText.setText("Unable to access leaderboard.\nFirestore permissions need updating.");
                         Log.e(TAG, "PERMISSION_DENIED: Update Firestore rules to allow leaderboard queries");
                     } else {
+                        // Generic error message for users
                         showEmptyState(true);
                         emptyStateText.setText("Failed to load leaderboard.\nPlease try again later.");
                     }

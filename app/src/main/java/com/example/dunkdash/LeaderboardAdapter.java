@@ -15,14 +15,16 @@ import java.util.List;
 public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.ViewHolder> {
     private static final String TAG = "LeaderboardAdapter";
     private List<LeaderboardPlayer> players = new ArrayList<>();
-    private String currentUserId;
+    private String currentUserId; // So we can highlight the current user
 
+    // Update the entire list when new data comes from Firebase
     public void updatePlayers(List<LeaderboardPlayer> newPlayers) {
         this.players = new ArrayList<>(newPlayers);
         Log.d(TAG, "Updated players list with " + players.size() + " players, current user ID: " + currentUserId);
-        notifyDataSetChanged();
+        notifyDataSetChanged(); // Tell RecyclerView to refresh everything
     }
 
+    // Set the current user's ID so we can show "(You)" next to their entry
     public void setCurrentUserId(String userId) {
         this.currentUserId = userId;
         Log.d(TAG, "Set current user ID to: " + userId);
@@ -66,7 +68,7 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
         }
 
         public void bind(LeaderboardPlayer player, String currentUserId) {
-            // Handle rank/trophy display
+            // Show trophy for top 3, regular rank number for everyone else
             if (player.isTopThree()) {
                 trophyText.setText(player.getTrophyEmoji());
                 trophyText.setVisibility(View.VISIBLE);
@@ -77,10 +79,10 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
                 rankText.setVisibility(View.VISIBLE);
             }
 
-            // Set nickname and show/hide "You" indicator
             nicknameText.setText(player.getNickname());
             
-            // Debug logging to check user ID matching
+            // Debug logging to figure out why "(You)" indicator might not show
+            // This was probably added to fix a bug where users couldn't find themselves
             Log.d("LeaderboardAdapter", "Binding player: " + player.getNickname() + 
                               " | PlayerID: '" + player.getUserId() + "'" +
                               " | CurrentUserID: '" + currentUserId + "'" +
@@ -88,10 +90,12 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
                               " | Player ID null: " + (player.getUserId() == null) +
                               " | Current ID null: " + (currentUserId == null));
             
+            // Check if this is the current user - need to be careful with null checks and whitespace
             boolean isCurrentUser = currentUserId != null && 
                                   player.getUserId() != null && 
                                   currentUserId.trim().equals(player.getUserId().trim());
             
+            // Show "(You)" indicator so user can easily find themselves
             if (isCurrentUser) {
                 youIndicator.setVisibility(View.VISIBLE);
                 Log.d("LeaderboardAdapter", "✓ Showing (You) indicator for: " + player.getNickname());
@@ -102,7 +106,7 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
             maxScoreText.setText(String.valueOf(player.getMaxScore()));
             totalGamesText.setText(player.getTotalGames() + " games");
 
-            // Set background and text colors based on rank and current user
+            // Set colors and backgrounds based on rank and if it's current user
             setBackgroundAndColors(player, currentUserId);
         }
 
@@ -112,11 +116,11 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
                                   currentUserId.trim().equals(player.getUserId().trim());
             
             if (isCurrentUser) {
-                // Current user gets special green background
+                // Current user gets special green highlighting - easy to spot yourself
                 itemView.setBackgroundResource(R.drawable.leaderboard_current_user_background);
                 maxScoreText.setTextColor(0xFF4CAF50); // Green
             } else {
-                // Set background and score color based on rank
+                // Everyone else gets rank-based colors - gold/silver/bronze for top 3
                 switch (player.getRank()) {
                     case 1:
                         itemView.setBackgroundResource(R.drawable.leaderboard_gold_background);
