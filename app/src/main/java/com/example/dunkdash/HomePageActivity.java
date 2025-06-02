@@ -103,7 +103,6 @@ public class HomePageActivity extends AppCompatActivity {
                     if (!userDoc.exists()) return;
                     Long bgId   = userDoc.getLong("current_background");
                     Long ballId = userDoc.getLong("current_basketball");
-                    Long modeId = userDoc.getLong("current_mode");
 
                     // Background lookup
                     if (bgId != null) {
@@ -122,21 +121,13 @@ public class HomePageActivity extends AppCompatActivity {
                                 .get()
                                 .addOnSuccessListener(this::applyBasketball);
                     }
-
-                    // Mode lookup (if needed for UI updates)
-                    if (modeId != null) {
-                        db.collection("game-mode")
-                                .whereEqualTo("id", modeId)
-                                .limit(1)
-                                .get()
-                                .addOnSuccessListener(this::applyMode);
-                    }
                 });
     }
 
     private void loadUserInfo() {
         if (currentUser == null) {
             greetingText.setText("Hello, Guest!");
+            updateCurrentModeDisplay(1); // Default mode for guests
             return;
         }
 
@@ -146,6 +137,7 @@ public class HomePageActivity extends AppCompatActivity {
                 .addOnSuccessListener(userDoc -> {
                     if (!userDoc.exists()) {
                         greetingText.setText("Hello, Player!");
+                        updateCurrentModeDisplay(1); // Default mode
                         return;
                     }
 
@@ -170,8 +162,8 @@ public class HomePageActivity extends AppCompatActivity {
 
                     Log.d(TAG, "User info loaded - Nickname: " + nickname);
 
-                    // Load and display current game mode
-                    Long currentMode = userDoc.getLong("current_mode");
+                    // Load and display current game mode - use correct field name
+                    Long currentMode = userDoc.getLong("current_game_mode"); // Fixed field name
                     if (currentMode != null) {
                         updateCurrentModeDisplay(currentMode.intValue());
                     } else {

@@ -115,7 +115,7 @@ public class SignupActivity extends AppCompatActivity {
         userRecord.put("nickname", username);
         userRecord.put("current_background", 1);
         userRecord.put("current_basketball", 1);
-        userRecord.put("current_game_mode", 1);
+        userRecord.put("current_game_mode", 1); // Ensure correct field name
         userRecord.put("total_games", 0);
         userRecord.put("max_score", 0);
         userRecord.put("id", uid);
