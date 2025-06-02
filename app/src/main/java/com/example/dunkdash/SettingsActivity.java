@@ -1,40 +1,68 @@
 package com.example.dunkdash;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SettingsActivity extends AppCompatActivity implements LogoutDialog.LogoutDialogListener, ResetProgressDialog.ResetProgressDialogListener {
+import de.hdodenhof.circleimageview.CircleImageView;
+
+public class SettingsActivity extends AppCompatActivity implements LogoutDialog.LogoutDialogListener, ResetProgressDialog.ResetProgressDialogListener, ImagePickerDialog.ImagePickerDialogListener {
     private static final String TAG = "SettingsActivity";
+    private static final int CAMERA_PERMISSION_REQUEST = 100;
 
     private ImageButton backButton;
     private EditText nicknameInput;
-    private Button saveNicknameButton, resetProgressButton, logoutButton;
+    private Button saveNicknameButton, resetProgressButton, logoutButton, changePictureButton;
     private TextView currentEmailText, statsText;
     private SwitchCompat backgroundMusicSwitch, soundEffectsSwitch;
+    private CircleImageView profileImageView;
+    private ProgressBar profileUploadProgress;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private FirebaseStorage storage;
+    private StorageReference storageRef;
     private SharedPreferences prefs;
     private String userId;
+    private File tempImageFile;
+
+    private ActivityResultLauncher<Intent> galleryLauncher;
+    private ActivityResultLauncher<Intent> cameraLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +71,7 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
 
         initializeViews();
         initializeFirebase();
+        initializeActivityLaunchers();
         loadSettings();
         loadUserData();
         setupClickListeners();
@@ -54,9 +83,11 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
         saveNicknameButton = findViewById(R.id.saveNicknameButton);
         resetProgressButton = findViewById(R.id.resetProgressButton);
         logoutButton = findViewById(R.id.logoutButton);
+        changePictureButton = findViewById(R.id.changePictureButton);
         currentEmailText = findViewById(R.id.currentEmailText);
         statsText = findViewById(R.id.statsText);
-        
+        profileImageView = findViewById(R.id.profileImageView);
+
         backgroundMusicSwitch = findViewById(R.id.backgroundMusicSwitch);
         soundEffectsSwitch = findViewById(R.id.soundEffectsSwitch);
     }
@@ -64,24 +95,53 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
     private void initializeFirebase() {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        storage = FirebaseStorage.getInstance();
+        storageRef = storage.getReference();
         prefs = getSharedPreferences("DunkDashSettings", MODE_PRIVATE);
-        
+
         FirebaseUser user = mAuth.getCurrentUser();
         if (user != null) {
             userId = user.getUid();
         }
     }
 
+    private void initializeActivityLaunchers() {
+        galleryLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        Uri imageUri = result.getData().getData();
+                        if (imageUri != null) {
+                            uploadImageToFirebase(imageUri);
+                        }
+                    }
+                }
+        );
+
+        cameraLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        if (tempImageFile != null && tempImageFile.exists()) {
+                            Uri imageUri = Uri.fromFile(tempImageFile);
+                            uploadImageToFirebase(imageUri);
+                        }
+                    }
+                }
+        );
+    }
+
     private void setupClickListeners() {
         backButton.setOnClickListener(v -> finish());
-        
+
         saveNicknameButton.setOnClickListener(v -> saveNickname());
-        
+
         resetProgressButton.setOnClickListener(v -> showResetDialog());
-        
+
         logoutButton.setOnClickListener(v -> showLogoutDialog());
-        
-        // Save settings when switches are toggled
+
+        changePictureButton.setOnClickListener(v -> showImagePickerDialog());
+
         backgroundMusicSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             saveSetting("background_music", isChecked);
             if (isChecked) {
@@ -90,7 +150,7 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
                 Toast.makeText(this, "🔇 Background music disabled", Toast.LENGTH_SHORT).show();
             }
         });
-        
+
         soundEffectsSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             saveSetting("sound_effects", isChecked);
             if (isChecked) {
@@ -99,6 +159,165 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
                 Toast.makeText(this, "🔇 Sound effects disabled", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void showImagePickerDialog() {
+        ImagePickerDialog dialog = new ImagePickerDialog(this, this);
+        dialog.show();
+    }
+
+    @Override
+    public void onCameraSelected() {
+        if (checkCameraPermission()) {
+            openCamera();
+        } else {
+            requestCameraPermission();
+        }
+    }
+
+    @Override
+    public void onGallerySelected() {
+        openGallery();
+    }
+
+    @Override
+    public void onCancelled() {
+        Log.d(TAG, "Image picker cancelled");
+    }
+
+    private boolean checkCameraPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestCameraPermission() {
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.CAMERA},
+                CAMERA_PERMISSION_REQUEST);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                openCamera();
+            } else {
+                Toast.makeText(this, "Camera permission is required to take photos", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void openCamera() {
+        try {
+            tempImageFile = File.createTempFile("profile_", ".jpg", getCacheDir());
+            Uri imageUri = FileProvider.getUriForFile(this,
+                    getPackageName() + ".fileprovider", tempImageFile);
+
+            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
+            cameraLauncher.launch(cameraIntent);
+        } catch (IOException e) {
+            Log.e(TAG, "Error creating temp file for camera", e);
+            Toast.makeText(this, "Error opening camera", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void openGallery() {
+        Intent galleryIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        galleryLauncher.launch(galleryIntent);
+    }
+
+    private void uploadImageToFirebase(Uri imageUri) {
+        if (userId == null) {
+            Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        changePictureButton.setEnabled(false);
+        changePictureButton.setText("📤 Uploading...");
+
+        try {
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), imageUri);
+            Bitmap resizedBitmap = resizeBitmap(bitmap, 300, 300);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+            byte[] imageData = baos.toByteArray();
+
+            StorageReference profileImagesRef = storageRef.child("profile_pictures/" + userId + ".jpg");
+
+            profileImagesRef.putBytes(imageData)
+                    .addOnSuccessListener(taskSnapshot -> {
+                        profileImagesRef.getDownloadUrl()
+                                .addOnSuccessListener(downloadUri -> {
+                                    updateProfilePictureUrl(downloadUri.toString());
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Failed to get download URL", e);
+                                    Toast.makeText(this, "❌ Failed to get image URL", Toast.LENGTH_SHORT).show();
+                                    resetUploadButton();
+                                });
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Failed to upload image", e);
+                        Toast.makeText(this, "❌ Failed to upload image", Toast.LENGTH_SHORT).show();
+                        resetUploadButton();
+                    });
+
+        } catch (IOException e) {
+            Log.e(TAG, "Error processing image", e);
+            Toast.makeText(this, "❌ Error processing image", Toast.LENGTH_SHORT).show();
+            resetUploadButton();
+        }
+    }
+
+    private Bitmap resizeBitmap(Bitmap bitmap, int maxWidth, int maxHeight) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+
+        float ratioBitmap = (float) width / (float) height;
+        float ratioMax = (float) maxWidth / (float) maxHeight;
+
+        int finalWidth = maxWidth;
+        int finalHeight = maxHeight;
+
+        if (ratioMax > ratioBitmap) {
+            finalWidth = (int) ((float) maxHeight * ratioBitmap);
+        } else {
+            finalHeight = (int) ((float) maxWidth / ratioBitmap);
+        }
+
+        return Bitmap.createScaledBitmap(bitmap, finalWidth, finalHeight, true);
+    }
+
+    private void updateProfilePictureUrl(String imageUrl) {
+        Map<String, Object> update = new HashMap<>();
+        update.put("profile_picture_url", imageUrl);
+
+        db.collection("users").document(userId)
+                .update(update)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "✅ Profile picture updated!", Toast.LENGTH_SHORT).show();
+
+                    Glide.with(this)
+                            .load(imageUrl)
+                            .placeholder(R.drawable.ic_default_profile)
+                            .error(R.drawable.ic_default_profile)
+                            .into(profileImageView);
+
+                    resetUploadButton();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to update profile picture URL", e);
+                    Toast.makeText(this, "❌ Failed to save profile picture", Toast.LENGTH_SHORT).show();
+                    resetUploadButton();
+                });
+    }
+
+    private void resetUploadButton() {
+        changePictureButton.setEnabled(true);
+        changePictureButton.setText("📸 Change Picture");
     }
 
     private void loadSettings() {
@@ -113,35 +332,40 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
             return;
         }
 
-        // Load email
         FirebaseUser user = mAuth.getCurrentUser();
         if (user != null) {
             String email = user.getEmail();
             currentEmailText.setText("📧 Email: " + (email != null ? email : "Unknown"));
         }
 
-        // Load user data from Firestore
         db.collection("users").document(userId)
                 .get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
-                        // Load current nickname
                         String nickname = doc.getString("nickname");
                         if (nickname != null && !nickname.trim().isEmpty()) {
                             nicknameInput.setHint("Current: " + nickname);
                         }
 
-                        // Load statistics
+                        String profilePictureUrl = doc.getString("profile_picture_url");
+                        if (profilePictureUrl != null && !profilePictureUrl.trim().isEmpty()) {
+                            Glide.with(this)
+                                    .load(profilePictureUrl)
+                                    .placeholder(R.drawable.ic_default_profile)
+                                    .error(R.drawable.ic_default_profile)
+                                    .into(profileImageView);
+                        }
+
                         long totalGames = doc.contains("total_games") ? doc.getLong("total_games") : 0;
                         long maxScore = doc.contains("max_score") ? doc.getLong("max_score") : 0;
                         int currentBackground = doc.contains("current_background") ? doc.getLong("current_background").intValue() : 1;
                         int currentBasketball = doc.contains("current_basketball") ? doc.getLong("current_basketball").intValue() : 1;
 
                         String stats = "🎮 Games Played: " + totalGames + "\n" +
-                                      "🏆 Best Score: " + maxScore + "\n" +
-                                      "🏞️ Current Background: #" + currentBackground + "\n" +
-                                      "🏀 Current Basketball: #" + currentBasketball;
-                        
+                                "🏆 Best Score: " + maxScore + "\n" +
+                                "🏞️ Current Background: #" + currentBackground + "\n" +
+                                "🏀 Current Basketball: #" + currentBasketball;
+
                         statsText.setText(stats);
                     }
                 })
@@ -153,7 +377,7 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
 
     private void saveNickname() {
         String newNickname = nicknameInput.getText().toString().trim();
-        
+
         if (newNickname.isEmpty()) {
             Toast.makeText(this, "Please enter a nickname", Toast.LENGTH_SHORT).show();
             return;
@@ -242,7 +466,7 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
                 .update(reset)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "✅ Progress reset successfully", Toast.LENGTH_SHORT).show();
-                    loadUserData(); // Refresh the displayed stats
+                    loadUserData();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to reset progress", e);
@@ -251,15 +475,12 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
     }
 
     private void performLogout() {
-        // Clear all local settings
         prefs.edit().clear().apply();
-        
-        // Sign out from Firebase
+
         mAuth.signOut();
-        
+
         Toast.makeText(this, "👋 Logged out successfully", Toast.LENGTH_SHORT).show();
-        
-        // Navigate to login screen and clear task stack
+
         Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
