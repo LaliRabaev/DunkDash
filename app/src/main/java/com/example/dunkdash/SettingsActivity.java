@@ -95,8 +95,21 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
     private void initializeFirebase() {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
-        storage = FirebaseStorage.getInstance();
-        storageRef = storage.getReference();
+
+        // Initialize Firebase Storage with proper error handling
+        try {
+            storage = FirebaseStorage.getInstance();
+            storageRef = storage.getReference();
+            Log.d(TAG, "Firebase Storage initialized successfully");
+            Log.d(TAG, "Storage bucket: " + storage.getApp().getOptions().getStorageBucket());
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize Firebase Storage", e);
+            Toast.makeText(this, "Storage not available. Profile pictures disabled.", Toast.LENGTH_LONG).show();
+            // Disable profile picture functionality
+            changePictureButton.setEnabled(false);
+            changePictureButton.setText("📸 Storage Unavailable");
+        }
+
         prefs = getSharedPreferences("DunkDashSettings", MODE_PRIVATE);
 
         FirebaseUser user = mAuth.getCurrentUser();
@@ -162,6 +175,10 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
     }
 
     private void showImagePickerDialog() {
+        if (storage == null) {
+            Toast.makeText(this, "Storage not available. Cannot upload images.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         ImagePickerDialog dialog = new ImagePickerDialog(this, this);
         dialog.show();
     }
@@ -234,6 +251,11 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
             return;
         }
 
+        if (storage == null || storageRef == null) {
+            Toast.makeText(this, "Storage not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         changePictureButton.setEnabled(false);
         changePictureButton.setText("📤 Uploading...");
 
@@ -245,29 +267,48 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
             resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
             byte[] imageData = baos.toByteArray();
 
-            StorageReference profileImagesRef = storageRef.child("profile_pictures/" + userId + ".jpg");
+            // Use a simpler path structure and add timestamp to avoid conflicts
+            String fileName = "profile_" + userId + "_" + System.currentTimeMillis() + ".jpg";
+            StorageReference profileImageRef = storageRef.child("profile_pictures").child(fileName);
 
-            profileImagesRef.putBytes(imageData)
+            Log.d(TAG, "Uploading to: " + profileImageRef.getPath());
+
+            profileImageRef.putBytes(imageData)
                     .addOnSuccessListener(taskSnapshot -> {
-                        profileImagesRef.getDownloadUrl()
+                        Log.d(TAG, "Image uploaded successfully");
+                        profileImageRef.getDownloadUrl()
                                 .addOnSuccessListener(downloadUri -> {
+                                    Log.d(TAG, "Download URL obtained: " + downloadUri.toString());
                                     updateProfilePictureUrl(downloadUri.toString());
                                 })
                                 .addOnFailureListener(e -> {
                                     Log.e(TAG, "Failed to get download URL", e);
-                                    Toast.makeText(this, "❌ Failed to get image URL", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(this, "❌ Failed to get image URL: " + e.getMessage(), Toast.LENGTH_LONG).show();
                                     resetUploadButton();
                                 });
                     })
                     .addOnFailureListener(e -> {
                         Log.e(TAG, "Failed to upload image", e);
-                        Toast.makeText(this, "❌ Failed to upload image", Toast.LENGTH_SHORT).show();
+                        String errorMsg = e.getMessage();
+                        if (errorMsg != null && errorMsg.contains("storage bucket")) {
+                            Toast.makeText(this, "❌ Storage not configured. Please check Firebase setup.", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(this, "❌ Upload failed: " + errorMsg, Toast.LENGTH_LONG).show();
+                        }
                         resetUploadButton();
+                    })
+                    .addOnProgressListener(taskSnapshot -> {
+                        double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
+                        Log.d(TAG, "Upload progress: " + progress + "%");
                     });
 
         } catch (IOException e) {
             Log.e(TAG, "Error processing image", e);
-            Toast.makeText(this, "❌ Error processing image", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "❌ Error processing image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            resetUploadButton();
+        } catch (Exception e) {
+            Log.e(TAG, "Unexpected error during upload", e);
+            Toast.makeText(this, "❌ Unexpected error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             resetUploadButton();
         }
     }
@@ -379,47 +420,6 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
         String newNickname = nicknameInput.getText().toString().trim();
 
         if (newNickname.isEmpty()) {
-            Toast.makeText(this, "Please enter a nickname", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (newNickname.length() > 20) {
-            Toast.makeText(this, "Nickname must be 20 characters or less", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (userId == null) {
-            Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        saveNicknameButton.setEnabled(false);
-        saveNicknameButton.setText("💾 Saving...");
-
-        Map<String, Object> update = new HashMap<>();
-        update.put("nickname", newNickname);
-
-        db.collection("users").document(userId)
-                .update(update)
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "✅ Nickname updated to: " + newNickname, Toast.LENGTH_SHORT).show();
-                    nicknameInput.setText("");
-                    nicknameInput.setHint("Current: " + newNickname);
-                    saveNicknameButton.setEnabled(true);
-                    saveNicknameButton.setText("💾 Save");
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to update nickname", e);
-                    Toast.makeText(this, "❌ Failed to update nickname", Toast.LENGTH_SHORT).show();
-                    saveNicknameButton.setEnabled(true);
-                    saveNicknameButton.setText("💾 Save");
-                });
-    }
-
-    private void saveSetting(String key, boolean value) {
-        prefs.edit().putBoolean(key, value).apply();
-    }
-
     private void showResetDialog() {
         ResetProgressDialog dialog = new ResetProgressDialog(this, this);
         dialog.show();
