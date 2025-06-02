@@ -420,6 +420,47 @@ public class SettingsActivity extends AppCompatActivity implements LogoutDialog.
         String newNickname = nicknameInput.getText().toString().trim();
 
         if (newNickname.isEmpty()) {
+            Toast.makeText(this, "Please enter a nickname", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (newNickname.length() > 20) {
+            Toast.makeText(this, "Nickname must be 20 characters or less", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (userId == null) {
+            Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        saveNicknameButton.setEnabled(false);
+        saveNicknameButton.setText("💾 Saving...");
+
+        Map<String, Object> update = new HashMap<>();
+        update.put("nickname", newNickname);
+
+        db.collection("users").document(userId)
+                .update(update)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "✅ Nickname updated to: " + newNickname, Toast.LENGTH_SHORT).show();
+                    nicknameInput.setText("");
+                    nicknameInput.setHint("Current: " + newNickname);
+                    saveNicknameButton.setEnabled(true);
+                    saveNicknameButton.setText("💾 Save");
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to update nickname", e);
+                    Toast.makeText(this, "❌ Failed to update nickname", Toast.LENGTH_SHORT).show();
+                    saveNicknameButton.setEnabled(true);
+                    saveNicknameButton.setText("💾 Save");
+                });
+    }
+
+    private void saveSetting(String key, boolean value) {
+        prefs.edit().putBoolean(key, value).apply();
+    }
+
     private void showResetDialog() {
         ResetProgressDialog dialog = new ResetProgressDialog(this, this);
         dialog.show();
