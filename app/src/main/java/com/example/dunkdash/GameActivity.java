@@ -35,58 +35,49 @@ import java.util.Random;
 
 public class GameActivity extends AppCompatActivity implements GameOverDialog.GameOverDialogListener {
 
-    // Core UI elements that change during gameplay
+    // Dynamic views
     private ImageView gameBackground;
     private ImageView player;
 
-    // Obstacle containers - left and right sides have different cone patterns
+    // Obstacles
     private FrameLayout leftContainer, rightContainer;
     private View topBarrierContainer, bottomBarrierContainer;
     private final List<ImageView> sideCones = new ArrayList<>();
 
-    // Game loop runs at ~60fps for smooth animation
+    // Game loop
     private Handler handler = new Handler();
     private Runnable gameLoop;
-    private static final int FRAME_RATE_MS = 16; // About 60 FPS
+    private static final int FRAME_RATE_MS = 16;
 
-    // Physics constants - tweaked through lots of playtesting
+    // Physics
     private float playerX, playerY, dx = 8f, dy = 0f;
-    private float baseDx = 8f; // Base horizontal speed before difficulty scaling
     private static final float GRAVITY = 0.5f, JUMP_VELOCITY = -10f;
 
-    // Game state tracking
+    // State
     private boolean leftActive = true, rightActive = true, prepared = false;
     private long startTime;
-    private int score = 0;
+    private int score = 0; // Use single score variable
     private boolean gameActive = true;
-    
-    // Prevent double-scoring when bouncing off walls
+    // Add bounce detection to prevent multiple scoring
     private boolean justBouncedLeft = false, justBouncedRight = false;
 
-    // Firebase for saving game data
+    // Firestore
     private FirebaseFirestore db;
     private String userId;
 
-    // Ad system for continue feature
+    // AdMob
     private RewardedAdManager rewardedAdManager;
 
-    // UI elements
+    // Score
     private TextView scoreTextView;
-    private TextView gameModeTextView;
 
-    // Game difficulty system - gets harder over time
-    private int gameMode = 1; // 1=Easy, 2=Medium, 3=Hard, 4=Extreme
-    private float speedMultiplier = 1.0f;
-    private static final float[] GAME_MODE_SPEEDS = {1.0f, 1.3f, 1.6f, 2.0f}; // Speed multipliers
-
-    // Progressive difficulty within each game mode
+    // Add difficulty tracking
     private int difficultyLevel = 1;
     private long lastDifficultyUpdate = 0;
-    private static final long DIFFICULTY_INTERVAL_MS = 8000; // Increase every 8 seconds
-    private static final int MAX_DIFFICULTY = 15;
-    private float speedIncreasePerLevel = 0.1f; // Speed gradually increases
+    private static final long DIFFICULTY_INTERVAL_MS = 10000; // Increase difficulty every 10 seconds
+    private static final int MAX_DIFFICULTY = 10;
 
-    // Countdown system for game start
+    // Add countdown tracking
     private FrameLayout countdownOverlay;
     private TextView countdownText;
     private boolean isCountingDown = false;
@@ -99,116 +90,84 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
-        // Bind all the UI elements
+        // bind dynamic views
         gameBackground       = findViewById(R.id.game_background);
         player               = findViewById(R.id.player_basketball);
         scoreTextView        = findViewById(R.id.score_text_view);
-        gameModeTextView     = findViewById(R.id.game_mode_text_view);
 
-        // Obstacle containers
+        // bind obstacles
         leftContainer        = findViewById(R.id.left_cones_container);
         rightContainer       = findViewById(R.id.right_cones_container);
         topBarrierContainer  = findViewById(R.id.top_barrier_container);
         bottomBarrierContainer = findViewById(R.id.bottom_barrier_container);
 
-        // Countdown overlay
+        // bind countdown overlay
         countdownOverlay = findViewById(R.id.countdown_overlay);
         countdownText = findViewById(R.id.countdown_text);
 
-        // Firebase setup
+        // Firebase
         db = FirebaseFirestore.getInstance();
         FirebaseUser u = FirebaseAuth.getInstance().getCurrentUser();
         if (u != null) userId = u.getUid();
 
-        // Load user's selected background and basketball
+        // load dynamic selections
         loadUserSelections();
 
-        // Figure out what game mode we should use
-        gameMode = getIntent().getIntExtra("game_mode", -1);
-
-        if (gameMode == -1) {
-            // No mode specified, load from user's saved preference
-            loadGameModeFromDatabase();
-        } else {
-            Log.d("GameActivity", "Game mode from intent: " + gameMode);
-            initializeSpeedForGameMode();
-        }
-
-        // Tap to jump - only works when game is running (not during countdown)
+        // tap-to-jump listener - only work when game is active and not counting down
         findViewById(R.id.rootLayout).setOnClickListener(v -> {
             if (gameActive && !isCountingDown) {
                 dy = JUMP_VELOCITY;
-                // Important: Don't score on tap! Only score on side bounces
+                // NO score increment here - only on side bounces
                 Log.d("GameActivity", "Tap! Jump only, score stays: " + score);
             }
         });
 
-        // Set up ad system for continue feature
+        // Initialize AdMob properly
         RewardedAdManager.initialize(this);
         rewardedAdManager = new RewardedAdManager();
         rewardedAdManager.loadRewardedAd(this);
 
+        // Initialize game
         initializeGame();
     }
 
-    private void loadGameModeFromDatabase() {
-        if (userId == null) {
-            Log.w("GameActivity", "No user ID, using default game mode");
-            gameMode = 1;
-            initializeSpeedForGameMode();
-            return;
+    private void initializeGame() {
+        // Always start fresh unless continuing from ad
+        boolean continueGame = getIntent().getBooleanExtra("continue", false);
+        if (continueGame) {
+            score = getIntent().getIntExtra("score", 0);
+        } else {
+            score = 0;
         }
-
-        Log.d("GameActivity", "Loading game mode from database for user: " + userId);
-
-        db.collection("users").document(userId)
-                .get()
-                .addOnSuccessListener(userDoc -> {
-                    if (userDoc.exists()) {
-                        if (userDoc.contains("current_game_mode")) {
-                            Long modeFromDb = userDoc.getLong("current_game_mode");
-                            if (modeFromDb != null) {
-                                gameMode = modeFromDb.intValue();
-                                Log.d("GameActivity", "Loaded game mode from database: " + gameMode);
-                            } else {
-                                Log.w("GameActivity", "current_game_mode field is null, using default");
-                                gameMode = 1;
-                            }
-                        } else {
-                            Log.w("GameActivity", "current_game_mode field doesn't exist, using default");
-                            gameMode = 1;
-                        }
-                    } else {
-                        Log.w("GameActivity", "User document doesn't exist, using default mode");
-                        gameMode = 1;
-                    }
-                    initializeSpeedForGameMode();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("GameActivity", "Failed to load game mode from database", e);
-                    gameMode = 1; // Safe fallback
-                    initializeSpeedForGameMode();
-                });
+        updateScoreDisplay();
+        gameActive = true;
     }
 
-    private void initializeSpeedForGameMode() {
-        // Validate game mode is in expected range
-        if (gameMode < 1 || gameMode > 4) {
-            Log.w("GameActivity", "Invalid game mode: " + gameMode + ", using default");
-            gameMode = 1;
+    private void updateScoreDisplay() {
+        if (scoreTextView != null) {
+            scoreTextView.setText("Score: " + score);
+            Log.d("GameActivity", "TextView updated with: Score: " + score);
+        } else {
+            Log.e("GameActivity", "scoreTextView is null!");
         }
-
-        // Set base speed based on selected difficulty
-        speedMultiplier = GAME_MODE_SPEEDS[gameMode - 1];
-        baseDx = 8f * speedMultiplier;
-        dx = dx > 0 ? baseDx : -baseDx; // Keep direction but update speed
-
-        Log.d("GameActivity", "Initialized - Game mode: " + gameMode + ", Speed multiplier: " + speedMultiplier + ", Base speed: " + baseDx);
-
-        updateGameModeDisplay();
     }
 
-    // Start 3-2-1-GO countdown before game begins
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && !prepared) {
+            startTime = System.currentTimeMillis();
+            addCones("left");
+            addCones("right");
+            prepared = true;
+            playerX = player.getX();
+            playerY = player.getY();
+
+            // Start countdown instead of immediately starting game
+            startCountdown(() -> startGameLoop());
+        }
+    }
+
     private void startCountdown(Runnable onComplete) {
         isCountingDown = true;
         countdownValue = 3;
@@ -229,7 +188,7 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
                     countdownValue--;
                     countdownHandler.postDelayed(this, 1000);
                 } else {
-                    // Countdown finished, start the actual game
+                    // Countdown finished
                     isCountingDown = false;
                     countdownOverlay.setVisibility(View.GONE);
                     Log.d("GameActivity", "Countdown finished, starting game");
@@ -242,16 +201,13 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     }
 
     private void startGameLoop() {
-        // Main game loop - runs every 16ms for smooth 60fps animation
         gameLoop = () -> {
             if (gameActive) {
                 updateMovement();
                 if (detectCollision()) {
-                    // Game over! Stop the loop and show options
                     handler.removeCallbacks(gameLoop);
                     onGameFail();
                 } else {
-                    // Keep going
                     handler.postDelayed(gameLoop, FRAME_RATE_MS);
                 }
             }
@@ -263,12 +219,12 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         gameActive = false;
         handler.removeCallbacks(gameLoop);
 
-        // Show game over dialog with restart and continue options
+        // Show game over dialog with current score and ad availability
         GameOverDialog dialog = new GameOverDialog(
                 this,
                 this,
-                score,
-                rewardedAdManager.isRewardedAdLoaded() // Only show ad option if we have an ad ready
+                score, // Use the correct score variable
+                rewardedAdManager.isRewardedAdLoaded()
         );
         dialog.show();
     }
@@ -276,23 +232,24 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     // GameOverDialogListener implementation
     @Override
     public void onRestartGame() {
-        // Save the game stats and go back to home
+        // Save current game stats before restarting
         saveGameAndFinish();
     }
 
     @Override
     public void onContinueWithAd() {
-        // Show rewarded ad, if user completes it they can continue playing
         rewardedAdManager.showRewardedAd(this, new RewardedAdManager.RewardedAdCallback() {
             @Override
             public void onAdRewarded() {
-                // User watched the ad! Let them continue with their current score
+                // User earned reward, continue the game
                 runOnUiThread(() -> {
                     gameActive = true;
+                    // Reset player position to center
                     resetPlayerPosition();
+                    // Clear current obstacles and regenerate
                     resetObstacles();
 
-                    // Another countdown before resuming
+                    // Start countdown before continuing game
                     startCountdown(() -> startGameLoop());
 
                     Toast.makeText(GameActivity.this,
@@ -303,7 +260,7 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
 
             @Override
             public void onAdDismissed() {
-                // User closed ad without watching - treat as restart
+                // User closed the ad without completing it
                 if (!gameActive) {
                     onRestartGame();
                 }
@@ -320,30 +277,25 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     }
 
     private void resetPlayerPosition() {
-        // Put player back in center when continuing after ad
+        // Reset player to center of screen
         int screenWidth = findViewById(R.id.rootLayout).getWidth();
         int screenHeight = findViewById(R.id.rootLayout).getHeight();
 
         playerX = (screenWidth - player.getWidth()) / 2f;
         playerY = (screenHeight - player.getHeight()) / 2f;
+        dx = 8f; // Reset horizontal velocity
+        dy = 0f; // Reset vertical velocity
 
-        // Use current speed (including difficulty progression)
-        float currentSpeed = getCurrentSpeed();
-        dx = dx > 0 ? currentSpeed : -currentSpeed;
-        dy = 0f;
-
-        // Reset bounce detection
+        // Reset bounce flags
         justBouncedLeft = false;
         justBouncedRight = false;
 
         player.setX(playerX);
         player.setY(playerY);
-
-        Log.d("GameActivity", "Reset player position with speed: " + currentSpeed + " for mode: " + gameMode);
     }
 
     private void resetObstacles() {
-        // Clear all obstacles and regenerate them
+        // Clear existing obstacles
         removeCones(leftContainer);
         removeCones(rightContainer);
         sideCones.clear();
@@ -352,63 +304,188 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         leftActive = true;
         rightActive = true;
 
-        // Reset difficulty progression
+        // Reset difficulty when restarting
         difficultyLevel = 1;
         lastDifficultyUpdate = 0;
-        initializeSpeedForGameMode();
 
-        // Add fresh obstacles
+        // Add new obstacles
         addCones("left");
         addCones("right");
     }
 
+    private void saveGameAndFinish() {
+        if (userId == null) {
+            finishToHome();
+            return;
+        }
+        long now = System.currentTimeMillis();
+        double dur = (now - startTime) / 1000.0;
+
+        DocumentReference gameRef = db.collection("games").document();
+        String gameId = gameRef.getId();
+
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("id", gameId);
+        doc.put("user_id", userId);
+        doc.put("start_date", new Timestamp(new Date(startTime)));
+        doc.put("duration", dur);
+        doc.put("game_mode", 1);
+        doc.put("score", score); // Use score instead of tapCount
+
+        gameRef.set(doc)
+                .addOnSuccessListener(unused -> updateUserStats())
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Save game failed: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                    finishToHome();
+                });
+    }
+
+    private void updateUserStats() {
+        DocumentReference userRef = db.collection("users").document(userId);
+        db.runTransaction((Transaction.Function<Void>) tx -> {
+                    DocumentSnapshot snap = tx.get(userRef);
+                    long total = snap.contains("total_games") ? snap.getLong("total_games") : 0;
+                    long max   = snap.contains("max_score")   ? snap.getLong("max_score")   : 0;
+
+                    tx.update(userRef, "total_games", total + 1);
+                    if (score > max) {
+                        tx.update(userRef, "max_score", score);
+                    }
+                    return null;
+                }).addOnSuccessListener(aVoid -> finishToHome())
+                .addOnFailureListener(e -> finishToHome());
+    }
+
+    private void finishToHome() {
+        // Return to home page instead of FailActivity
+        Intent intent = new Intent(this, HomePageActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        handler.removeCallbacks(gameLoop);
+        countdownHandler.removeCallbacks(countdownRunnable);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (gameLoop != null && gameActive && !isCountingDown) {
+            handler.postDelayed(gameLoop, FRAME_RATE_MS);
+        }
+
+        // Load ad in advance for next failure
+        if (!rewardedAdManager.isRewardedAdLoaded()) {
+            rewardedAdManager.loadRewardedAd(this);
+        }
+    }
+
+    private int dpToPx(int dp) {
+        float d = getResources().getDisplayMetrics().density;
+        return Math.round(dp * d);
+    }
+
+    // ————— Dynamic Selection Loading —————
+    private void loadUserSelections() {
+        if (userId == null) return;
+        db.collection("users").document(userId)
+                .get()
+                .addOnSuccessListener(userDoc -> {
+                    if (!userDoc.exists()) return;
+
+                    Long bgId   = userDoc.getLong("current_background");
+                    Long ballId = userDoc.getLong("current_basketball");
+
+                    if (bgId != null) {
+                        db.collection("backgrounds")
+                                .whereEqualTo("id", bgId)
+                                .limit(1)
+                                .get()
+                                .addOnSuccessListener(this::applyBackground);
+                    }
+
+                    if (ballId != null) {
+                        db.collection("basketballs")
+                                .whereEqualTo("id", ballId)
+                                .limit(1)
+                                .get()
+                                .addOnSuccessListener(this::applyBasketball);
+                    }
+                });
+    }
+
+    private void applyBackground(QuerySnapshot qs) {
+        if (qs.isEmpty()) return;
+        DocumentSnapshot doc = qs.getDocuments().get(0);
+        int resId = resolveDrawable(doc.getString("image_path"));
+        if (resId != 0) gameBackground.setImageResource(resId);
+    }
+
+    private void applyBasketball(QuerySnapshot qs) {
+        if (qs.isEmpty()) return;
+        DocumentSnapshot doc = qs.getDocuments().get(0);
+        int resId = resolveDrawable(doc.getString("image_path"));
+        if (resId != 0) player.setImageResource(resId);
+    }
+
+    private int resolveDrawable(String path) {
+        if (path == null) return 0;
+        String name = path.replaceFirst("^drawable/", "").replaceFirst("\\.png$", "");
+        return getResources().getIdentifier(name, "drawable", getPackageName());
+    }
+    // ————————————————————————————————
+
     private void updateMovement() {
-        // Don't move during countdown
+        // Don't update movement during countdown
         if (isCountingDown) {
             return;
         }
 
-        // Gradually make game harder as time passes
+        // Update difficulty based on time
         updateDifficulty();
 
-        // Update player position
         playerX += dx;
         playerY += dy;
-        dy += GRAVITY; // Gravity pulls player down
+        dy += GRAVITY;
 
         int pw = player.getWidth(), ph = player.getHeight();
         int w  = player.getRootView().getWidth();
         int h  = player.getRootView().getHeight();
 
-        // Check for side bounces - this is how player scores points!
+        // Track side bounces for scoring with bounce detection
         if (playerX <= 0) {
-            dx = Math.abs(getCurrentSpeed()); // Bounce right
-            // Only score if we haven't just bounced (prevents double-scoring)
+            dx = Math.abs(dx);
+            // Only score if we haven't just bounced left
             if (!justBouncedLeft) {
                 Log.d("GameActivity", "Left side bounce! Score: " + score);
                 incrementScore();
                 justBouncedLeft = true;
-                justBouncedRight = false;
+                justBouncedRight = false; // Reset right bounce flag
             }
-            swapSide(false, true); // Update obstacle pattern
+            swapSide(false, true);
         } else if (playerX + pw >= w) {
-            dx = -Math.abs(getCurrentSpeed()); // Bounce left
+            dx = -Math.abs(dx);
+            // Only score if we haven't just bounced right
             if (!justBouncedRight) {
                 Log.d("GameActivity", "Right side bounce! Score: " + score);
                 incrementScore();
                 justBouncedRight = true;
-                justBouncedLeft = false;
+                justBouncedLeft = false; // Reset left bounce flag
             }
             swapSide(true, false);
         } else {
-            // Reset bounce flags when away from sides
+            // Reset bounce flags when not touching sides
             if (playerX > 10 && playerX + pw < w - 10) {
                 justBouncedLeft = false;
                 justBouncedRight = false;
             }
         }
 
-        // Keep player on screen vertically
         if (playerY < 0) {
             playerY = 0; dy = 0;
         }
@@ -416,59 +493,30 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
             playerY = h - ph; dy = 0;
         }
 
-        // Apply position to the actual view
         player.setX(playerX);
         player.setY(playerY);
-    }
-
-    private float getCurrentSpeed() {
-        // Speed increases with difficulty level for extra challenge
-        float difficultySpeedBoost = (difficultyLevel - 1) * speedIncreasePerLevel;
-        return baseDx + (baseDx * difficultySpeedBoost);
     }
 
     private void updateDifficulty() {
         long currentTime = System.currentTimeMillis();
         long elapsedTime = currentTime - startTime;
 
-        // Check if it's time to crank up the difficulty
+        // Check if it's time to increase difficulty
         if (elapsedTime - lastDifficultyUpdate >= DIFFICULTY_INTERVAL_MS && difficultyLevel < MAX_DIFFICULTY) {
             difficultyLevel++;
             lastDifficultyUpdate = elapsedTime;
 
-            // Update speed and regenerate obstacles for new challenge
-            float newSpeed = getCurrentSpeed();
-            dx = dx > 0 ? newSpeed : -newSpeed;
-
-            // Higher difficulties get more frequent obstacle changes
-            if (difficultyLevel > 5) {
-                // Chaos mode - constantly changing patterns
-                if (leftActive) {
-                    removeCones(leftContainer);
-                    addCones("left");
-                }
-                if (rightActive) {
-                    removeCones(rightContainer);
-                    addCones("right");
-                }
-            } else {
-                // Standard regeneration
-                if (leftActive) {
-                    removeCones(leftContainer);
-                    addCones("left");
-                }
-                if (rightActive) {
-                    removeCones(rightContainer);
-                    addCones("right");
-                }
+            // Regenerate obstacles with new difficulty
+            if (leftActive) {
+                removeCones(leftContainer);
+                addCones("left");
+            }
+            if (rightActive) {
+                removeCones(rightContainer);
+                addCones("right");
             }
 
-            Log.d("GameActivity", "Difficulty increased to level: " + difficultyLevel + ", Speed: " + newSpeed);
-
-            // Give player feedback about difficulty increase
-            runOnUiThread(() -> {
-                Toast.makeText(this, "Difficulty Level " + difficultyLevel + "!", Toast.LENGTH_SHORT).show();
-            });
+            Log.d("GameActivity", "Difficulty increased to level: " + difficultyLevel);
         }
     }
 
@@ -476,7 +524,7 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         if (gameActive) {
             score++;
             Log.d("GameActivity", "Score incremented to: " + score);
-            // Update UI immediately on main thread
+            // Post to main thread immediately
             runOnUiThread(() -> {
                 updateScoreDisplay();
                 Log.d("GameActivity", "Score display updated to: " + score);
@@ -484,50 +532,45 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         }
     }
 
+    private void swapSide(boolean leftAdd, boolean rightAdd) {
+        if (!leftAdd && leftActive)  { removeCones(leftContainer); leftActive = false; }
+        if ( leftAdd && !leftActive) { addCones("left"); leftActive = true; }
+        if (!rightAdd && rightActive){ removeCones(rightContainer); rightActive = false; }
+        if ( rightAdd && !rightActive){ addCones("right"); rightActive = true; }
+    }
+
     private void addCones(String side) {
         FrameLayout container = side.equals("left") ? leftContainer : rightContainer;
         int height = container.getHeight();
 
-        // Cone count scales with difficulty and game mode
-        // Harder modes start with more cones, difficulty adds even more over time
-        int baseMinCones = Math.max(2, gameMode); // At least 2, harder modes get more
-        int baseMaxCones = Math.max(3, gameMode + 2);
-
-        int minCones = Math.min(baseMinCones + (difficultyLevel - 1) / 2, 10);
-        int maxCones = Math.min(baseMaxCones + (difficultyLevel - 1) / 2, 12);
+        // Difficulty-based cone count (1-2 at level 1, up to 6-8 at max difficulty)
+        int minCones = Math.min(1 + (difficultyLevel - 1) / 2, 6);
+        int maxCones = Math.min(2 + difficultyLevel / 2, 8);
         int count = minCones + new Random().nextInt(maxCones - minCones + 1);
 
-        count = Math.max(2, count); // Always at least 2 cones
+        int coneH = dpToPx(120);
 
-        // Cone size shrinks with difficulty - creates tighter passages
-        int baseConeHeight = gameMode <= 2 ? 120 : 100; // Smaller for hard modes
-        int coneH = dpToPx(baseConeHeight - (difficultyLevel - 1) * 2);
-        coneH = Math.max(dpToPx(60), coneH); // Don't make them too tiny
-
-        // Gap between cones gets smaller with difficulty
-        int baseGap = dpToPx(Math.max(60, 120 - (gameMode - 1) * 15));
-        int difficultyReduction = (difficultyLevel - 1) * dpToPx(12);
-        int minGap = dpToPx(15); // Minimum gap for playability
+        // Reduce gap between cones as difficulty increases
+        int baseGap = dpToPx(100);
+        int difficultyReduction = (difficultyLevel - 1) * dpToPx(8);
+        int minGap = dpToPx(20); // Minimum gap to maintain playability
         int gap = Math.max(minGap, baseGap - difficultyReduction);
 
-        // Make sure cones fit in container
+        // Calculate if we need to adjust cone spacing
         int totalConeSpace = count * coneH + (count + 1) * gap;
         if (totalConeSpace > height) {
             gap = Math.max(minGap, (height - count * coneH) / (count + 1));
         }
 
-        // Generate challenging but fair cone positions
         List<Integer> positions = generateConePositions(height, count, coneH, gap);
 
-        // Create and place the cone views
         for (int i = 0; i < count; i++) {
             ImageView cone = new ImageView(this);
             cone.setImageResource(R.drawable.game_cone);
-            cone.setRotation(side.equals("left") ? 90 : -90); // Point inward
+            cone.setRotation(side.equals("left") ? 90 : -90);
             cone.setScaleType(ImageView.ScaleType.FIT_XY);
 
-            int coneWidth = dpToPx(Math.max(50, 80 - (difficultyLevel - 1)));
-            FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(coneWidth, coneH);
+            FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(dpToPx(80), coneH);
             p.gravity = side.equals("left") ? Gravity.START : Gravity.END;
             p.topMargin = positions.get(i);
 
@@ -535,181 +578,122 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
             container.addView(cone, p);
             sideCones.add(cone);
         }
-
-        Log.d("GameActivity", "Added " + count + " cones to " + side + " side (difficulty: " + difficultyLevel + ", game mode: " + gameMode + ")");
     }
 
     private List<Integer> generateConePositions(int containerHeight, int coneCount, int coneHeight, int gap) {
         List<Integer> positions = new ArrayList<>();
         Random random = new Random();
 
-        // Game mode affects when complex patterns start appearing
-        int complexityThreshold = Math.max(1, 4 - gameMode); // Hard modes get complex sooner
-
-        if (difficultyLevel <= complexityThreshold) {
-            // Early game: Simple, evenly spaced cones - learn the mechanics
+        if (difficultyLevel <= 3) {
+            // Early levels: Simple evenly spaced cones
             for (int i = 0; i < coneCount; i++) {
                 positions.add(gap * (i + 1) + coneHeight * i);
             }
-        } else if (difficultyLevel <= complexityThreshold + 3) {
-            // Mid game: Some variation to keep it interesting
-            generateIrregularSpacing(positions, containerHeight, coneCount, coneHeight, gap, random);
-        } else if (difficultyLevel <= complexityThreshold + 8) {
-            // High difficulty: Challenging patterns that require skill
-            generateChallengingPatterns(positions, containerHeight, coneCount, coneHeight, gap, random);
+        } else if (difficultyLevel <= 6) {
+            // Mid levels: Some clustering and irregular spacing
+            int usableHeight = containerHeight - coneCount * coneHeight - gap * 2; // Top and bottom margins
+            int currentY = gap;
+
+            for (int i = 0; i < coneCount; i++) {
+                if (i == 0) {
+                    positions.add(currentY);
+                } else {
+                    // Add some randomness to spacing
+                    int minSpacing = gap / 2;
+                    int maxSpacing = gap * 2;
+                    int spacing = minSpacing + random.nextInt(maxSpacing - minSpacing + 1);
+                    currentY += coneHeight + spacing;
+
+                    // Ensure we don't exceed container bounds
+                    if (currentY + coneHeight > containerHeight - gap) {
+                        currentY = containerHeight - gap - coneHeight;
+                    }
+                    positions.add(currentY);
+                }
+            }
         } else {
-            // Extreme mode: Maximum difficulty - for the pros
-            generateExtremePatterns(positions, containerHeight, coneCount, coneHeight, gap, random);
+            // High levels: Create challenging patterns
+            int usableHeight = containerHeight - coneCount * coneHeight - gap * 2;
+
+            if (difficultyLevel % 2 == 0) {
+                // Even difficulty: Cluster cones at top and bottom
+                int conesPerCluster = coneCount / 2;
+                int remainingCones = coneCount % 2;
+
+                // Top cluster
+                for (int i = 0; i < conesPerCluster; i++) {
+                    positions.add(gap + i * (coneHeight + gap / 3));
+                }
+
+                // Bottom cluster
+                int bottomStart = containerHeight - gap - (conesPerCluster + remainingCones) * coneHeight - (conesPerCluster + remainingCones - 1) * gap / 3;
+                for (int i = 0; i < conesPerCluster + remainingCones; i++) {
+                    positions.add(bottomStart + i * (coneHeight + gap / 3));
+                }
+            } else {
+                // Odd difficulty: Create a narrow passage in the middle
+                int passageStart = containerHeight / 3;
+                int passageEnd = 2 * containerHeight / 3;
+
+                // Fill top area
+                int topCones = coneCount / 2;
+                for (int i = 0; i < topCones; i++) {
+                    int y = gap + i * (coneHeight + gap / 4);
+                    if (y + coneHeight < passageStart) {
+                        positions.add(y);
+                    }
+                }
+
+                // Fill bottom area
+                int bottomCones = coneCount - topCones;
+                for (int i = 0; i < bottomCones; i++) {
+                    int y = passageEnd + gap + i * (coneHeight + gap / 4);
+                    if (y + coneHeight < containerHeight - gap) {
+                        positions.add(y);
+                    }
+                }
+
+                // Add any remaining cones randomly in safe areas
+                while (positions.size() < coneCount) {
+                    int y = random.nextInt(containerHeight - coneHeight - gap * 2) + gap;
+                    boolean validPosition = true;
+
+                    // Check if position conflicts with passage or existing cones
+                    if (y + coneHeight > passageStart && y < passageEnd) {
+                        validPosition = false;
+                    }
+
+                    for (int existingY : positions) {
+                        if (Math.abs(y - existingY) < coneHeight + gap / 2) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+
+                    if (validPosition) {
+                        positions.add(y);
+                    }
+                }
+            }
         }
 
         return positions;
     }
 
-    private void generateIrregularSpacing(List<Integer> positions, int containerHeight, int coneCount, int coneHeight, int gap, Random random) {
-        // Mix up the spacing but keep it reasonable
-        int usableHeight = containerHeight - coneCount * coneHeight - gap * 2;
-        int currentY = gap;
-
-        for (int i = 0; i < coneCount; i++) {
-            if (i == 0) {
-                positions.add(currentY);
-            } else {
-                // Vary the gap size randomly
-                int minSpacing = gap / 3;
-                int maxSpacing = gap * 2;
-                int spacing = minSpacing + random.nextInt(maxSpacing - minSpacing + 1);
-                currentY += coneHeight + spacing;
-
-                // Don't go off the bottom
-                if (currentY + coneHeight > containerHeight - gap) {
-                    currentY = containerHeight - gap - coneHeight;
-                }
-                positions.add(currentY);
-            }
-        }
-    }
-
-    private void generateChallengingPatterns(List<Integer> positions, int containerHeight, int coneCount, int coneHeight, int gap, Random random) {
-        // Rotate through different challenging pattern types
-        if (difficultyLevel % 3 == 0) {
-            generateNarrowPassages(positions, containerHeight, coneCount, coneHeight, gap, random);
-        } else if (difficultyLevel % 3 == 1) {
-            generateEdgeClusters(positions, containerHeight, coneCount, coneHeight, gap);
-        } else {
-            generateZigzagPattern(positions, containerHeight, coneCount, coneHeight, gap);
-        }
-    }
-
-    private void generateExtremePatterns(List<Integer> positions, int containerHeight, int coneCount, int coneHeight, int gap, Random random) {
-        // Multiple narrow passages - very challenging but still playable
-        int passageCount = Math.min(3, difficultyLevel - 10);
-        int passageHeight = containerHeight / (passageCount + 1);
-
-        for (int passage = 0; passage < passageCount; passage++) {
-            int passageStart = passage * passageHeight + passageHeight / 3;
-            int passageEnd = passageStart + passageHeight / 6; // Very narrow
-
-            // Fill the spaces between passages with cones
-            int conesForThisSection = coneCount / passageCount;
-            for (int i = 0; i < conesForThisSection && positions.size() < coneCount; i++) {
-                int y;
-                do {
-                    y = random.nextInt(passageHeight) + passage * passageHeight;
-                } while (y >= passageStart && y <= passageEnd); // Avoid the passage area
-
-                if (y + coneHeight < containerHeight - gap) {
-                    positions.add(y);
-                }
-            }
-        }
-
-        // Fill any remaining slots randomly
-        while (positions.size() < coneCount) {
-            int y = random.nextInt(containerHeight - coneHeight - gap * 2) + gap;
-            boolean validPosition = true;
-
-            // Make sure new cone doesn't overlap existing ones
-            for (int existingY : positions) {
-                if (Math.abs(y - existingY) < coneHeight + gap / 3) {
-                    validPosition = false;
-                    break;
-                }
-            }
-
-            if (validPosition) {
-                positions.add(y);
-            }
-        }
-    }
-
-    private void generateNarrowPassages(List<Integer> positions, int containerHeight, int coneCount, int coneHeight, int gap, Random random) {
-        // Create one narrow passage in the middle, fill top and bottom with cones
-        int passageStart = containerHeight / 3;
-        int passageEnd = 2 * containerHeight / 3;
-        int passageWidth = Math.max(coneHeight, containerHeight / 8);
-
-        // Top section
-        int topCones = coneCount / 2;
-        for (int i = 0; i < topCones; i++) {
-            positions.add(gap + i * (coneHeight + gap / 4));
-        }
-
-        // Bottom section
-        int bottomCones = coneCount - topCones;
-        for (int i = 0; i < bottomCones; i++) {
-            int y = passageEnd + gap + i * (coneHeight + gap / 4);
-            if (y + coneHeight < containerHeight - gap) {
-                positions.add(y);
-            }
-        }
-    }
-
-    private void generateEdgeClusters(List<Integer> positions, int containerHeight, int coneCount, int coneHeight, int gap) {
-        // Cluster cones at top and bottom, leave middle more open
-        int conesPerCluster = coneCount / 2;
-        int remainingCones = coneCount % 2;
-
-        // Top cluster
-        for (int i = 0; i < conesPerCluster; i++) {
-            positions.add(gap + i * (coneHeight + gap / 4));
-        }
-
-        // Bottom cluster
-        int bottomStart = containerHeight - gap - (conesPerCluster + remainingCones) * coneHeight - (conesPerCluster + remainingCones - 1) * gap / 4;
-        for (int i = 0; i < conesPerCluster + remainingCones; i++) {
-            positions.add(bottomStart + i * (coneHeight + gap / 4));
-        }
-    }
-
-    private void generateZigzagPattern(List<Integer> positions, int containerHeight, int coneCount, int coneHeight, int gap) {
-        // Alternate between top and bottom - creates a zigzag effect
-        boolean topSide = true;
-        int currentY = gap;
-
-        for (int i = 0; i < coneCount; i++) {
-            if (topSide) {
-                positions.add(currentY);
-                currentY += coneHeight * 2 + gap;
-            } else {
-                int bottomY = containerHeight - gap - coneHeight - (i / 2) * (coneHeight + gap);
-                positions.add(Math.max(currentY, bottomY));
-            }
-            topSide = !topSide;
-        }
+    private void removeCones(FrameLayout container) {
+        container.removeAllViews();
+        sideCones.removeIf(view -> view.getParent() == container);
     }
 
     private boolean detectCollision() {
-        // Skip collision during countdown - player isn't really playing yet
+        // Skip collision detection during countdown
         if (isCountingDown) {
             return false;
         }
 
-        // Check collision with side cones
         for (ImageView cone : sideCones) {
             if (pixelCollision(player, cone)) return true;
         }
-        
-        // Check collision with top/bottom barriers
         Rect pr = new Rect(), tr = new Rect(), br = new Rect();
         player.getHitRect(pr);
         topBarrierContainer.getHitRect(tr);
@@ -718,8 +702,6 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     }
 
     private boolean pixelCollision(ImageView a, ImageView b) {
-        // Pixel-perfect collision detection - more accurate than just rectangles
-        // This prevents the frustrating "I wasn't touching it!" moments
         if (!(a.getDrawable() instanceof BitmapDrawable) ||
                 !(b.getDrawable() instanceof BitmapDrawable)) return false;
         Bitmap ba = ((BitmapDrawable)a.getDrawable()).getBitmap();
@@ -730,11 +712,9 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         b.getGlobalVisibleRect(rb);
         if (!ri.setIntersect(ra, rb)) return false;
 
-        int alphaTh = 50; // Transparency threshold
+        int alphaTh = 50;
         int oxA = ri.left - ra.left, oyA = ri.top - ra.top;
         int oxB = ri.left - rb.left, oyB = ri.top - rb.top;
-        
-        // Check each overlapping pixel for actual collision
         for (int y = 0; y < ri.height(); y++) {
             for (int x = 0; x < ri.width(); x++) {
                 int pa = ba.getPixel(oxA + x, oyA + y);
