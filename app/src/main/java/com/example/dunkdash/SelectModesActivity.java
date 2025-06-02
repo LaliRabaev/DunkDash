@@ -462,7 +462,7 @@ public class SelectModesActivity extends AppCompatActivity {
         saveButton.setText("💾 Saving...");
 
         Map<String, Object> update = new HashMap<>();
-        update.put("current_mode", selectedModeId);
+        update.put("current_game_mode", selectedModeId); // Changed from "current_mode" to "current_game_mode"
         
         db.collection("users").document(userId)
                 .update(update)

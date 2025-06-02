@@ -628,12 +628,16 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         int height = container.getHeight();
 
         // Enhanced difficulty-based cone count with game mode consideration
-        int baseMinCones = Math.max(1, gameMode - 1); // Harder modes start with more cones
-        int baseMaxCones = Math.max(2, gameMode + 1);
+        // Ensure minimum of 2 cones per side, maximum based on difficulty and game mode
+        int baseMinCones = Math.max(2, gameMode); // Always at least 2 cones, harder modes start with more
+        int baseMaxCones = Math.max(3, gameMode + 2);
 
-        int minCones = Math.min(baseMinCones + (difficultyLevel - 1) / 2, 8);
+        int minCones = Math.min(baseMinCones + (difficultyLevel - 1) / 2, 10);
         int maxCones = Math.min(baseMaxCones + (difficultyLevel - 1) / 2, 12);
         int count = minCones + new Random().nextInt(maxCones - minCones + 1);
+
+        // Ensure we always have at least 2 cones
+        count = Math.max(2, count);
 
         // Cone size varies with difficulty and game mode
         int baseConeHeight = gameMode <= 2 ? 120 : 100; // Smaller cones for harder modes
@@ -670,6 +674,8 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
             container.addView(cone, p);
             sideCones.add(cone);
         }
+
+        Log.d("GameActivity", "Added " + count + " cones to " + side + " side (difficulty: " + difficultyLevel + ", game mode: " + gameMode + ")");
     }
 
     private List<Integer> generateConePositions(int containerHeight, int coneCount, int coneHeight, int gap) {
@@ -781,10 +787,7 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         // Fill top area
         int topCones = coneCount / 2;
         for (int i = 0; i < topCones; i++) {
-            int y = gap + i * (coneHeight + gap / 4);
-            if (y + coneHeight < passageStart) {
-                positions.add(y);
-            }
+            positions.add(gap + i * (coneHeight + gap / 4));
         }
 
         // Fill bottom area
