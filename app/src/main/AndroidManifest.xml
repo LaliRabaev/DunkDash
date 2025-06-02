@@ -70,6 +70,13 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.DunkDash" />
 
+        <!-- Audio Test Activity for debugging -->
+        <activity
+            android:name=".AudioTestActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.DunkDash" />
+
         <!-- Add this service declaration inside the <application> tag -->
         <service
             android:name=".MusicService"

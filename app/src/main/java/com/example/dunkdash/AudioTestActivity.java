@@ -34,6 +34,9 @@ public class AudioTestActivity extends AppCompatActivity {
         Button gameOverButton = findViewById(R.id.testGameOverButton);
         Button musicToggle = findViewById(R.id.testMusicToggle);
         
+        // Check what audio files are available
+        checkAudioFiles();
+        
         shootButton.setOnClickListener(v -> {
             audioManager.playSound(AudioManager.SOUND_SHOOT);
             Toast.makeText(this, "Shoot sound played", Toast.LENGTH_SHORT).show();
@@ -65,6 +68,28 @@ public class AudioTestActivity extends AppCompatActivity {
             startService(musicIntent);
             Toast.makeText(this, "Background music started", Toast.LENGTH_SHORT).show();
         });
+    }
+
+    private void checkAudioFiles() {
+        String[] audioFiles = {"background_music", "bg_music", "music", "background", 
+                              "shoot_sound", "score_sound", "miss_sound", "click_sound", "game_over_sound"};
+        
+        StringBuilder foundFiles = new StringBuilder("Found audio files:\n");
+        boolean foundAny = false;
+        
+        for (String fileName : audioFiles) {
+            int resId = getResources().getIdentifier(fileName, "raw", getPackageName());
+            if (resId != 0) {
+                foundFiles.append("✓ ").append(fileName).append("\n");
+                foundAny = true;
+            }
+        }
+        
+        if (!foundAny) {
+            foundFiles.append("❌ No audio files found in res/raw directory");
+        }
+        
+        Toast.makeText(this, foundFiles.toString(), Toast.LENGTH_LONG).show();
     }
     
     @Override
