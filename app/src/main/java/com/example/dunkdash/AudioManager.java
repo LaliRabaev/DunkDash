@@ -6,7 +6,6 @@ import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
 import android.media.ToneGenerator;
-import android.media.AudioManager;
 import android.util.Log;
 
 import java.util.HashMap;
@@ -64,41 +63,14 @@ public class AudioManager {
                 .setAudioAttributes(audioAttributes)
                 .build();
         
-        // Try to load sound effects, use fallback if files don't exist
-        loadSoundEffects();
-    }
-    
-    private void loadSoundEffects() {
-        try {
-            // Try to load from raw resources
-            int shootId = loadSoundResource("shoot_sound");
-            int scoreId = loadSoundResource("score_sound");
-            int missId = loadSoundResource("miss_sound");
-            int buttonId = loadSoundResource("button_click");
-            int gameOverId = loadSoundResource("game_over_sound");
-            
-            soundEffects.put(SOUND_SHOOT, shootId);
-            soundEffects.put(SOUND_SCORE, scoreId);
-            soundEffects.put(SOUND_MISS, missId);
-            soundEffects.put(SOUND_BUTTON_CLICK, buttonId);
-            soundEffects.put(SOUND_GAME_OVER, gameOverId);
-            
-            Log.d(TAG, "Sound effects loaded successfully");
-        } catch (Exception e) {
-            Log.w(TAG, "Could not load sound files, using tone fallbacks", e);
-        }
-    }
-    
-    private int loadSoundResource(String fileName) {
-        try {
-            int resId = context.getResources().getIdentifier(fileName, "raw", context.getPackageName());
-            if (resId != 0) {
-                return soundPool.load(context, resId, 1);
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Could not load sound: " + fileName, e);
-        }
-        return -1; // Return -1 if sound couldn't be loaded
+        // Initialize with placeholder values since audio files may not exist yet
+        soundEffects.put(SOUND_SHOOT, -1);
+        soundEffects.put(SOUND_SCORE, -1);
+        soundEffects.put(SOUND_MISS, -1);
+        soundEffects.put(SOUND_BUTTON_CLICK, -1);
+        soundEffects.put(SOUND_GAME_OVER, -1);
+        
+        Log.d(TAG, "Sound pool initialized with tone fallbacks");
     }
     
     public void startBackgroundMusic() {
@@ -150,15 +122,8 @@ public class AudioManager {
     public void playSound(String soundType) {
         if (!isSoundEffectsEnabled()) return;
         
-        Integer soundId = soundEffects.get(soundType);
-        if (soundId != null && soundId != -1 && soundPool != null) {
-            // Play loaded sound effect
-            soundPool.play(soundId, 0.7f, 0.7f, 1, 0, 1.0f);
-            Log.d(TAG, "Played sound effect: " + soundType);
-        } else {
-            // Fallback to tone generator
-            playToneFallback(soundType);
-        }
+        // Use tone generator for now since audio files may not exist
+        playToneFallback(soundType);
     }
     
     private void playToneFallback(String soundType) {
@@ -184,3 +149,35 @@ public class AudioManager {
             }
             Log.d(TAG, "Played tone fallback for: " + soundType);
         } catch (Exception e) {
+            Log.e(TAG, "Error playing tone", e);
+        }
+    }
+    
+    public void updateMusicSetting(boolean enabled) {
+        if (enabled) {
+            startBackgroundMusic();
+        } else {
+            pauseBackgroundMusic();
+        }
+    }
+    
+    private boolean isMusicEnabled() {
+        return prefs.getBoolean("background_music", true);
+    }
+    
+    private boolean isSoundEffectsEnabled() {
+        return prefs.getBoolean("sound_effects", true);
+    }
+    
+    public void cleanup() {
+        stopBackgroundMusic();
+        if (soundPool != null) {
+            soundPool.release();
+            soundPool = null;
+        }
+        if (toneGenerator != null) {
+            toneGenerator.release();
+            toneGenerator = null;
+        }
+    }
+}

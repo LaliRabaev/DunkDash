@@ -37,4 +37,22 @@
     <Button
         android:id="@+id/testClickButton"
         android:layout_width="200dp"
-        android:layout_height="
+        android:layout_height="wrap_content"
+        android:text="Test Click Sound"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/testGameOverButton"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:text="Test Game Over Sound"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/testMusicToggle"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:text="Start Background Music"
+        android:layout_marginBottom="16dp" />
+
+</LinearLayout>
