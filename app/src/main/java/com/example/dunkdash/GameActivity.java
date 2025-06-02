@@ -69,8 +69,9 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     // AdMob
     private RewardedAdManager rewardedAdManager;
 
-    // Score
+    // Score and mode display
     private TextView scoreTextView;
+    private TextView gameModeTextView; // Add game mode display
 
     // Add game mode and speed scaling
     private int gameMode = 1; // Default to mode 1
@@ -101,6 +102,7 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         gameBackground       = findViewById(R.id.game_background);
         player               = findViewById(R.id.player_basketball);
         scoreTextView        = findViewById(R.id.score_text_view);
+        gameModeTextView     = findViewById(R.id.game_mode_text_view); // Bind mode display
 
         // bind obstacles
         leftContainer        = findViewById(R.id.left_cones_container);
@@ -120,13 +122,14 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         // load dynamic selections
         loadUserSelections();
 
-        // Get game mode from intent or database
-        gameMode = getIntent().getIntExtra("game_mode", 1);
+        // Get game mode from intent first, then database as fallback
+        gameMode = getIntent().getIntExtra("game_mode", -1);
 
-        // Load game mode from database if not provided in intent
-        if (gameMode == 1) { // Default value, try to load from DB
+        if (gameMode == -1) {
+            // No mode provided in intent, load from database
             loadGameModeFromDatabase();
         } else {
+            Log.d("GameActivity", "Game mode from intent: " + gameMode);
             initializeSpeedForGameMode();
         }
 
@@ -150,23 +153,40 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
 
     private void loadGameModeFromDatabase() {
         if (userId == null) {
+            Log.w("GameActivity", "No user ID, using default game mode");
+            gameMode = 1;
             initializeSpeedForGameMode();
             return;
         }
 
+        Log.d("GameActivity", "Loading game mode from database for user: " + userId);
+
         db.collection("users").document(userId)
                 .get()
                 .addOnSuccessListener(userDoc -> {
-                    if (userDoc.exists() && userDoc.contains("current_game_mode")) {
-                        Long modeFromDb = userDoc.getLong("current_game_mode");
-                        if (modeFromDb != null) {
-                            gameMode = modeFromDb.intValue();
+                    if (userDoc.exists()) {
+                        if (userDoc.contains("current_game_mode")) {
+                            Long modeFromDb = userDoc.getLong("current_game_mode");
+                            if (modeFromDb != null) {
+                                gameMode = modeFromDb.intValue();
+                                Log.d("GameActivity", "Loaded game mode from database: " + gameMode);
+                            } else {
+                                Log.w("GameActivity", "current_game_mode field is null, using default");
+                                gameMode = 1;
+                            }
+                        } else {
+                            Log.w("GameActivity", "current_game_mode field doesn't exist, using default");
+                            gameMode = 1;
                         }
+                    } else {
+                        Log.w("GameActivity", "User document doesn't exist, using default mode");
+                        gameMode = 1;
                     }
                     initializeSpeedForGameMode();
                 })
                 .addOnFailureListener(e -> {
-                    Log.w("GameActivity", "Failed to load game mode from database", e);
+                    Log.e("GameActivity", "Failed to load game mode from database", e);
+                    gameMode = 1;
                     initializeSpeedForGameMode();
                 });
     }
@@ -174,6 +194,7 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
     private void initializeSpeedForGameMode() {
         // Validate game mode
         if (gameMode < 1 || gameMode > 4) {
+            Log.w("GameActivity", "Invalid game mode: " + gameMode + ", using default");
             gameMode = 1;
         }
 
@@ -182,7 +203,35 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
         baseDx = 8f * speedMultiplier;
         dx = dx > 0 ? baseDx : -baseDx; // Maintain direction
 
-        Log.d("GameActivity", "Game mode: " + gameMode + ", Speed multiplier: " + speedMultiplier);
+        Log.d("GameActivity", "Initialized - Game mode: " + gameMode + ", Speed multiplier: " + speedMultiplier + ", Base speed: " + baseDx);
+
+        // Update UI with current mode
+        updateGameModeDisplay();
+    }
+
+    private void updateGameModeDisplay() {
+        if (gameModeTextView != null) {
+            String modeText = getModeDisplayText(gameMode);
+            gameModeTextView.setText(modeText);
+            Log.d("GameActivity", "Updated mode display: " + modeText);
+        } else {
+            Log.w("GameActivity", "gameModeTextView is null!");
+        }
+    }
+
+    private String getModeDisplayText(int mode) {
+        switch (mode) {
+            case 1:
+                return "😊 Easy Mode";
+            case 2:
+                return "😐 Medium Mode";
+            case 3:
+                return "💀 Hard Mode";
+            case 4:
+                return "🔥 Extreme Mode";
+            default:
+                return "🎮 Mode " + mode;
+        }
     }
 
     private void initializeGame() {
@@ -216,6 +265,9 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
             prepared = true;
             playerX = player.getX();
             playerY = player.getY();
+
+            // Ensure mode display is updated when game starts
+            updateGameModeDisplay();
 
             // Start countdown instead of immediately starting game
             startCountdown(() -> startGameLoop());
@@ -337,7 +389,10 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
 
         playerX = (screenWidth - player.getWidth()) / 2f;
         playerY = (screenHeight - player.getHeight()) / 2f;
-        dx = 8f; // Reset horizontal velocity
+
+        // Use current speed for the game mode, not default
+        float currentSpeed = getCurrentSpeed();
+        dx = dx > 0 ? currentSpeed : -currentSpeed; // Maintain direction but use proper speed
         dy = 0f; // Reset vertical velocity
 
         // Reset bounce flags
@@ -346,6 +401,8 @@ public class GameActivity extends AppCompatActivity implements GameOverDialog.Ga
 
         player.setX(playerX);
         player.setY(playerY);
+
+        Log.d("GameActivity", "Reset player position with speed: " + currentSpeed + " for mode: " + gameMode);
     }
 
     private void resetObstacles() {

@@ -16,6 +16,22 @@
         android:background="#DDDDDD"
         android:src="@null" />
 
+    <!-- Game mode display -->
+    <TextView
+        android:id="@+id/game_mode_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="50dp"
+        android:background="#80000000"
+        android:padding="8dp"
+        android:text="😊 Easy Mode"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:elevation="8dp" />
+
     <!-- Centered score display -->
     <TextView
         android:id="@+id/score_text_view"

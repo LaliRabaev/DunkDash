@@ -22,7 +22,7 @@ public class HomePageActivity extends AppCompatActivity {
 
     private boolean gameStarted = false;
     private ImageView homeBackground, playerBasketball;
-    private TextView greetingText;
+    private TextView greetingText, currentModeTextView; // Add mode display
     private FirebaseFirestore db;
     private FirebaseUser currentUser;
 
@@ -37,6 +37,7 @@ public class HomePageActivity extends AppCompatActivity {
 
         // 2) Bind user info TextViews
         greetingText = findViewById(R.id.greeting_text);
+        currentModeTextView = findViewById(R.id.current_mode_text_view); // Bind mode display
 
         // 3) Init Firebase
         db = FirebaseFirestore.getInstance();
@@ -168,10 +169,19 @@ public class HomePageActivity extends AppCompatActivity {
                     greetingText.setText(greeting);
 
                     Log.d(TAG, "User info loaded - Nickname: " + nickname);
+
+                    // Load and display current game mode
+                    Long currentMode = userDoc.getLong("current_mode");
+                    if (currentMode != null) {
+                        updateCurrentModeDisplay(currentMode.intValue());
+                    } else {
+                        updateCurrentModeDisplay(1); // Default mode
+                    }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load user info", e);
                     greetingText.setText("Hello, Player!");
+                    updateCurrentModeDisplay(1); // Default mode on failure
                 });
     }
 
@@ -221,8 +231,33 @@ public class HomePageActivity extends AppCompatActivity {
     private void applyMode(QuerySnapshot qs) {
         if (qs.isEmpty()) return;
         DocumentSnapshot doc = qs.getDocuments().get(0);
-        // Store mode info for game if needed
-        // Could update UI elements based on selected mode
+        Long modeId = doc.getLong("id");
+        if (modeId != null) {
+            updateCurrentModeDisplay(modeId.intValue());
+        }
+    }
+
+    private void updateCurrentModeDisplay(int mode) {
+        if (currentModeTextView != null) {
+            String modeText = getModeDisplayText(mode);
+            currentModeTextView.setText("Current Mode: " + modeText);
+            Log.d(TAG, "Updated mode display: " + modeText);
+        }
+    }
+
+    private String getModeDisplayText(int mode) {
+        switch (mode) {
+            case 1:
+                return "😊 Easy";
+            case 2:
+                return "😐 Medium";
+            case 3:
+                return "💀 Hard";
+            case 4:
+                return "🔥 Extreme";
+            default:
+                return "🎮 Mode " + mode;
+        }
     }
 
     /** Strips "drawable/" prefix and file extension, then resolves R.drawable.name */
